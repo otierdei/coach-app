@@ -1,0 +1,47 @@
+/* ===== GitHub version additions: wide screens (Mac, iPad landscape) ===== */
+/* The phone layout above stays untouched. From 1000 px the app uses the whole screen:
+   a sidebar on the left and the cards of each tab in columns. */
+@media (min-width: 1000px){
+  body{padding:0 32px 48px 256px}
+  .wrap{max-width:none;margin:0}
+  header.top{padding-block:18px 12px;margin-bottom:6px}
+  header.top .brand{font-size:15px}
+
+  nav.tabs{top:0;bottom:0;left:0;right:auto;width:224px;flex-direction:column;justify-content:flex-start;align-items:stretch;
+    border-top:0;border-right:1px solid var(--line);padding:76px 14px 20px}
+  nav.tabs .in{flex-direction:column;gap:4px;max-width:none}
+  nav.tabs button{flex:none;text-align:left;font-size:15px;padding:12px 16px;min-height:46px;border-radius:12px}
+  nav.tabs::before{content:"OTI · HYBRID";position:absolute;top:26px;left:30px;font-family:var(--display);font-weight:700;letter-spacing:.18em;font-size:15px;color:var(--muted)}
+  header.top .brand{visibility:hidden}
+
+  /* cards flow into columns; intro blocks, banners and wide pieces span the full width */
+  section.view{grid-template-columns:repeat(auto-fit,minmax(420px,1fr));align-items:start;gap:18px}
+  section.view > :not(.card):not(details.card):not(.wday){grid-column:1/-1}
+  #v-week{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  #v-week > .card{grid-column:1/-1}
+  #v-tasks > div{grid-template-columns:repeat(auto-fit,minmax(460px,1fr))!important;align-items:start}
+  #v-tasks > div > :not(.card),#v-tasks > div > .tk-imp,#v-tasks > div > .tk-add{grid-column:1/-1}
+  #v-setup{grid-template-columns:repeat(auto-fill,minmax(460px,1fr))}
+
+  /* Rule of Life page: two columns inside its paper background */
+  #v-life .ptw{margin-inline:0;border-radius:24px;padding:26px;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  #v-life .ptw > *{min-width:0;grid-column:1/-1}
+  #v-life .ptw > .pw-card{grid-column:auto}
+  #v-life .ptw .pw-rule,#v-life .ptw > div:has(> .pw-acc){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  #v-life .ptw > div:has(> .pw-acc) > :not(.pw-acc){grid-column:1/-1}
+
+  /* bottom sheet becomes a centered dialog */
+  .sheet{align-items:center;padding:32px}
+  .sheet-card{max-width:720px;border-radius:24px;max-height:88vh}
+  .sheet-card .grab{display:none}
+
+  .trio{max-width:720px;margin-inline:auto}
+}
+@media (min-width: 1600px){
+  body{padding-right:48px}
+  section.view{grid-template-columns:repeat(auto-fill,minmax(460px,1fr))}
+}
+/* installed as an app on the iPhone: keep content clear of the home indicator */
+@media (display-mode: standalone) and (max-width: 999px){
+  body{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+}
