@@ -289,6 +289,25 @@ function journalHtml(){
 
 /* ================= views ================= */
 let openDial = null;
+function tomorrowCardHtml(){
+  // v68: "Tomorrow" card under "Your day": calendar, training, music, fast day, tasks due tomorrow
+  const t = addDays(new Date(), 1), kt = dateKey(t), dt = dayFromPlan(t);
+  if(!dt) return "";
+  const s = dt.session, items = [];
+  const dname = LANG==="de" ? t.toLocaleDateString("de-DE",{weekday:"long", day:"numeric", month:"long"}) : t.toLocaleDateString("en-GB",{weekday:"long", day:"numeric", month:"long"});
+  if(isFast(t)) items.push(`<div class="banner"><b>${L("Fast day","Fastentag")}.</b> ${L("Water, tea, coffee only until dinner. Big dinner with carbs and protein tonight.","Nur Wasser, Tee, Kaffee bis zum Abendessen. Heute Abend großes Abendessen mit Kohlenhydraten und Eiweiß.")}</div>`);
+  items.push(`<div class="spread"><span>${L("Training","Training")}</span><span>${s ? `<b>${esc(s.def.name)}</b> <span class="mono">${fmt(s.start)}</span>` : esc(dt.conflict ? L("No slot","Kein Platz") : L("Rest day","Ruhetag"))}</span></div>`);
+  let mu = []; try{ mu = musicPlanned(t); }catch(e){}
+  for(const m of mu) items.push(`<div class="spread"><span>${L("Music","Musik")}</span><span>${esc((KIND[m.kind]||[m.kind,m.kind])[LANG==="de"?1:0])} <span class="mono">${esc(m.time||"")}${m.min?` · ${m.min} min`:""}</span></span></div>`);
+  let due = []; try{ due = tasksDoc.tasks.filter(x=>!x.done && !x.review && (x.due===kt || x.today===kt)); }catch(e){}
+  const allDay = allDayFor(t);
+  return `<details class="card" id="tomorrowCard"><summary>${L("Tomorrow","Morgen")}</summary>
+    <div class="eyebrow">${esc(dname)}</div>
+    ${allDay.length?`<div class="small muted">${L("All day","Ganztägig")}: ${allDay.map(esc).join(", ")}</div>`:""}
+    <div style="display:grid;gap:6px;font-size:14px">${items.join("")}</div>
+    ${due.length?`<div class="tk-subh">${L("Due tomorrow","Morgen fällig")}</div><div class="list">${due.map(x=>`<button type="button" class="lrow" data-tk-open="${esc(x.id)}" style="min-height:44px"><span class="t">${esc(x.title)}</span><span class="m">${esc(x.area||"")}${x.due===kt?` · ${L("due","fällig")}`:""}${x.today===kt?" · ★":""}</span><span class="v"></span></button>`).join("")}</div>`:`<p class="small muted">${L("Nothing due tomorrow in your tasks.","Morgen ist in deinen Aufgaben nichts fällig.")}</p>`}
+    ${dayCal(dt,"tomorrow")}<span class="small muted">${calState.status==="ok"?L("Calendar + template","Kalender + Vorlage"):L("Template only","Nur Vorlage")}</span></details>`;
+}
 function renderToday(){
   const now = new Date(), k = dateKey(now), d = dayFromPlan(now), R = recovery(now), w = weekIndex(now), lg = logData.days[k]||{};
   const s = d.session, adj = s ? adjust(s.def, R.level) : null, wc = weekCounts(mondayOf(now));
@@ -384,6 +403,7 @@ function renderToday(){
   html += `<details class="card"><summary>Your day</summary>
     ${allDayFor(now).length?`<div class="small muted">All day: ${allDayFor(now).map(esc).join(", ")}</div>`:""}
     ${dayCal(d,"today")}<span class="small muted">${calState.status==="ok"?"Calendar + template":"Template only"}</span></details>`;
+  html += tomorrowCardHtml();
   html += `<details class="card"><summary>Ask the coach</summary><p class="small muted">Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.</p>
     <button id="btnCoach">Review my week</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
   $("#v-today").innerHTML = html;
@@ -391,6 +411,7 @@ function renderToday(){
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); });
   bindChecks("#v-today", defForKey);
   bindRhythmCard($("#v-today"));
+  document.querySelectorAll("#tomorrowCard [data-tk-open]").forEach(b=>b.onclick = ()=>openTask(b.dataset.tkOpen));
   $("#btnOv").onclick = async ()=>{ const key = $("#ovKey").value; logData.overrides = logData.overrides||{}; profile.overrides = profile.overrides||{};
     if(!key){ delete logData.overrides[k]; delete profile.overrides[k]; } else logData.overrides[k] = profile.overrides[k] = {key, start: $("#ovStart").value||null, min: Number($("#ovMin").value)||30};
     for(const x of Object.keys(logData.overrides)) if(x < dateKey(addDays(new Date(),-14))) delete logData.overrides[x];
