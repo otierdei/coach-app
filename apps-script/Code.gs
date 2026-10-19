@@ -18,6 +18,8 @@
  * and before every read), bumps the version and moves the change file to "Coach Data/processed".
  * mode "merge": objects are merged key by key, arrays and values replace, {"__delete__":true} removes a key.
  * mode "set": replaces the whole doc (briefing, monthly).
+ * mode "patch": like merge, but a top level array of objects with "id" (e.g. tasks) is changed item by item:
+ *   each patch item is merged into the item with the same id, unknown ids are appended, {"id":..,"__delete__":true} removes one.
  * This script never changes or deletes anything in "Oti Health".
  */
 var DATA_FOLDER = 'Coach Data';
@@ -153,6 +155,21 @@ function mergeDeep_(base, patch) {
   });
   return out;
 }
+function patchById_(base, patch) {
+  var out = JSON.parse(JSON.stringify(base || {}));
+  Object.keys(patch).forEach(function (k) {
+    var v = patch[k];
+    var byId = Array.isArray(v) && Array.isArray(out[k]) && v.every(function (x) { return isObj_(x) && x.id != null; });
+    if (!byId) { out[k] = (isObj_(v) && isObj_(out[k])) ? mergeDeep_(out[k], v) : v; return; }
+    v.forEach(function (item) {
+      var i = -1;
+      for (var j = 0; j < out[k].length; j++) if (isObj_(out[k][j]) && out[k][j].id === item.id) { i = j; break; }
+      if (item.__delete__ === true) { if (i >= 0) out[k].splice(i, 1); return; }
+      if (i >= 0) out[k][i] = mergeDeep_(out[k][i], item); else out[k].push(item);
+    });
+  });
+  return out;
+}
 function applyInbox() {
   var inbox = subFolder_('inbox'), files = [], it = inbox.getFiles();
   while (it.hasNext()) files.push(it.next());
@@ -168,7 +185,7 @@ function applyInbox() {
       var name = ch.doc || f.getName().split('--')[0];
       if (DOCS.indexOf(name) < 0 || !isObj_(ch.data)) { f.setName('BAD ' + f.getName()); f.moveTo(done); return; }
       var df = docFile_(name), cur = df ? parseFile_(df) : {version: 0, data: {}};
-      var data = ch.mode === 'set' ? ch.data : mergeDeep_(cur.data || {}, ch.data);
+      var data = ch.mode === 'set' ? ch.data : ch.mode === 'patch' ? patchById_(cur.data || {}, ch.data) : mergeDeep_(cur.data || {}, ch.data);
       var rec = {version: cur.version + 1, updatedAt: new Date().toISOString(), by: ch.by || 'task', data: data};
       var body = JSON.stringify(rec);
       if (df) df.setContent(body); else dataFolder_().createFile(name + '.json', body, 'application/json');
