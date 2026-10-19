@@ -15,14 +15,27 @@ jobs:
       run:
         working-directory: worker
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      RAW_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WRANGLER: npx --yes wrangler@4.149.0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      # Secrets pasted on a phone often carry extra lines (for example the test command Cloudflare shows
+      # under the token). Take the first token shaped word and the first 32 hex account id; print only lengths.
+      - name: Clean credentials
+        run: |
+          tok=$(printf '%s' "$RAW_TOKEN" | grep -oE '[A-Za-z0-9_-]{40,}' | head -1 || true)
+          acc=$(printf '%s' "$RAW_ACCOUNT" | grep -oE '[0-9a-f]{32}' | head -1 || true)
+          echo "token secret: $(printf '%s' "$RAW_TOKEN" | wc -l) line breaks, token found: ${#tok} chars; account id found: ${#acc} chars"
+          test -n "$tok" && test -n "$acc"
+          echo "::add-mask::$tok"
+          echo "CLOUDFLARE_API_TOKEN=$tok" >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_ACCOUNT_ID=$acc" >> "$GITHUB_ENV"
+          curl -fsS -H "Authorization: Bearer $tok" https://api.cloudflare.com/client/v4/user/tokens/verify | grep -q '"status":"active"' && echo "token verified: active"
 
       - name: Crypto tests (RFC 8291 test vector, VAPID, round trip)
         run: node test/webpush.test.mjs
