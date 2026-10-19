@@ -108,6 +108,7 @@ const MB_EX = {
   pull: {n:"Pull ups", reps:()=>`2 × ${Math.max(2, Math.round((Number(latest("pullups"))||7)*0.4))}`},
   legs: {n:"Bulgarian split squats", reps:()=>`2 × 8 per leg`}
 };
+const MOB_ROUTINE = "10 cat cow, 3 world's greatest stretch per side, 60 s deep squat hold, 5 hip 90/90 switches per side, 10 shoulder circles with a towel";
 function microBreak(d){
   if(![1,3,4,5].includes(d.date.getDay())) return null;
   const restDay = (profile.overrides||{})[dateKey(d.date)]?.key==="rest";
@@ -120,8 +121,10 @@ function microBreak(d){
   const recent = [1,2,3,4,5,6].map(i=>logData.days[dateKey(addDays(d.date,-i))]?.mbEx).filter(Boolean);
   const g = ["push","pull","legs"].sort((a,b)=>score(a)-score(b) || recent.filter(x=>x===a).length - recent.filter(x=>x===b).length)[0];
   const why = today[g] ? "" : ({push:"Chest and arms are free today.", pull:"Your back is free today.", legs:"Your legs are free today."})[g] + (d.session ? " The planned session loads other muscles." : "");
-  if(restDay) return {s:mid-5, e:mid+5, g:"mob", name:"Mobility", reps:"5 min easy", why:"Rest day: only easy mobility, no strength work."};
-  return {s:mid-5, e:mid+5, g, name:MB_EX[g].n, reps:MB_EX[g].reps(), why};
+  // red recovery: only mobility, with the exact routine; a rest day otherwise keeps the light dose (about 40% of your max)
+  let red = false; try{ red = recovery(d.date).level === "r"; }catch(e){}
+  if(red) return {s:mid-5, e:mid+5, g:"mob", name:"Mobility", reps:"5 min:", why:MOB_ROUTINE + ". Recovery is red, so no strength work."};
+  return {s:mid-5, e:mid+5, g, name:MB_EX[g].n, reps:MB_EX[g].reps(), why: restDay ? "Rest day, light dose: about 40% of your max, slow and clean. It does not cost recovery." : why};
 }
 function weekCounts(monday){
   const P = weekPlan(monday); let planned = 0, done = 0;

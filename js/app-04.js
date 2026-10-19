@@ -372,7 +372,7 @@ function buildSchedule(n){
       lastMeal:fmt(lastMealFor(d)), windDown:fmt(isEveningDay(date) ? Math.min(d.bed.bed-60, toMin(habits.evening.time)) : d.bed.bed-60), phoneAway: isEveningDay(date) ? habits.evening.time : null, lightsOut:fmt(d.bed.bed), nextWake:fmt(d.bed.nextWake), lateNight:d.bed.late, afterLate:!!d.afterLate, fastDay:isFast(date), afterFast:isFast(addDays(date,-1)), preFast:isFast(addDays(date,1)),
       commitments:d.busy.map(b=>`${b.t} ${fmt(b.s)}-${fmt(b.e)}`),
       session: s ? {key:s.def.sessionKey, name:s.def.name, sub:s.def.sub||"", start:fmt(s.start), end:fmt(s.end), hard:!!s.def.hard, keySession:!!s.def.keySession, sets:s.def.total, lines:s.def.lines, moved:s.moved?`from ${s.fromDay}`:""} : null,
-      conflict: d.conflict||null, microBreak: (m=>m?{start:fmt(m.s), end:fmt(m.e), label: m.g==="mob" ? "Bewegungspause: 5 min Mobility locker" : `Bewegungspause: ${m.reps.replace("per leg","pro Bein")} ${({push:"Liegestütze",pull:"Klimmzüge",legs:"Bulgarian Split Squats"})[m.g]}`}:null)(microBreak(d))});
+      conflict: d.conflict||null, microBreak: (m=>m?{start:fmt(m.s), end:fmt(m.e), label: m.g==="mob" ? "Bewegungspause: 5 min Mobility (10 Katze Kuh, 3 World's Greatest Stretch pro Seite, 60 s tiefe Hocke, 5 Hüfte 90/90 pro Seite, 10 Schulterkreise mit Handtuch)" : `Bewegungspause: ${m.reps.replace("per leg","pro Bein")} ${({push:"Liegestütze",pull:"Klimmzüge",legs:"Bulgarian Split Squats"})[m.g]}`}:null)(microBreak(d))});
   }
   return out;
 }
