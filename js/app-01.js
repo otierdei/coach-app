@@ -118,6 +118,12 @@ function footballDef(){ return finishDef({name:"Football", sub:"Match, counts as
 function afterFootball(def){ const d = structuredClone(def);
   d.blocks = d.blocks.filter(b=>!/Nordic|Pistol|Broad jump|Copenhagen/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : b);
   d.sub = "Pull + arms, light legs after football"; return finishDef(d); }
+// compact strength (Oti, 19.10.2026): when the normal session does not fit its day (Monday lessons now start 13:00),
+// one set less on every exercise with 3 or more sets and no core finisher, so it fits 11:10 to 12:00 before lunch
+function compactDef(def){ const d = structuredClone(def);
+  d.blocks = d.blocks.filter(b=>!/Hollow body|Hanging knee/.test(b.n)).map(b=>b.s>=3? {...b, s:b.s-1, d:b.d.replace(new RegExp("^"+b.s+" × "), (b.s-1)+" × ")} : b);
+  d.name = def.name+" compact"; d.sub = (def.sub||"")+" · compact to fit the day"; d.min = 50; d.compact = true;
+  d.lines = d.blocks.map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`); d.total = d.blocks.reduce((n,b)=>n+b.s,0); return d; }
 function isFastDow(date){ return (profile.fastDays||[]).includes(date.getDay()); }
 // public holidays Baden-Wuerttemberg (no fast on these days)
 function bwHoliday(date){
@@ -318,7 +324,8 @@ function weekPlan(monday){
     if(fbSun && s.key==="easy" && Number(dow)===6) continue;
     if(fbSun && s.key==="long"){ day = byDow(6); pref = toMin("16:00"); moved = true; }
     if(s.key==="strengthA" && isFootball(addDays(day.date,-1))) def = afterFootball(def);
-    const t = findSlot(day.busy, pref, def.min, day.wake.wake+45, day.bed.bed - (def.hard?150:90));
+    let t = findSlot(day.busy, pref, def.min, day.wake.wake+45, day.bed.bed - (def.hard?150:90));
+    if(t==null && def.type==="strength"){ const c = compactDef(def), tc = findSlot(day.busy, pref, c.min, day.wake.wake+45, day.bed.bed-150); if(tc!=null){ def = c; t = tc; } }
     if(t!=null) day.session = {def, start:t, end:t+def.min, moved, fromDay: moved? "Sun" : undefined};
     else unplaced.push({def, from:day});
   }
