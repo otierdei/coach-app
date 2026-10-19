@@ -1,0 +1,14 @@
+name = "coach-push"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "coach-push"
+# filled in by .github/workflows/worker.yml at deploy time (the database is created there with jurisdiction eu)
+database_id = "__D1_ID__"
+migrations_dir = "migrations"
