@@ -103,19 +103,19 @@ function latest(k){
 function validTest(metric){
   // a max test logged on a red recovery day does not count (it would lower the base)
   const ts = (profile.tests||[]).filter(x=>x.metric===metric).sort((a,b)=>a.date<b.date?1:-1);
-  for(const t of ts){ let red = false; try{ red = !!(logData.days[t.date]?.form==="r"); }catch(e){} if(!red) return t.value; }
+  for(const t of ts){ if(!t.red) return t.value; }
   return profile.baselines[metric];
 }
 function testDate(metric){
-  const ts = (profile.tests||[]).filter(x=>x.metric===metric && logData.days[x.date]?.form!=="r").sort((a,b)=>a.date<b.date?1:-1);
+  const ts = (profile.tests||[]).filter(x=>x.metric===metric && !x.red).sort((a,b)=>a.date<b.date?1:-1);
   return ts[0]?.date || null;
 }
 const PROG_METRIC = {pullups:"pullups", chinups:"pullups", push0:"pushups", push1:"pushups", push2:"pushups"};
 const PROG_NEXT = {pullups:"At the cap: keep the reps and make every set explosive to the chest (muscle up prep).", chinups:"At the cap: slow 3 s lowering on every rep.", push0:"At the cap: next phase moves to decline push ups.", push1:"At the cap: next phase moves to archer push ups.", push2:"At the cap: add a 2 s pause at the bottom.", pike0:"At the cap: elevate your feet.", pike1:"At the cap: higher feet or a slower lowering."};
 // walk the logged history of one exercise before a date; returns {off, note}
 function progHistory(id, beforeKey){
-  const m = PROG_METRIC[id], td = m ? testDate(m) : null, from = [td, profile.blockStart].filter(Boolean).sort().pop() || "";
-  const days = Object.keys(logData.days||{}).filter(k=>k>from && k<beforeKey && logData.days[k]?.prog?.[id]).sort();
+  const m = PROG_METRIC[id], td = m ? testDate(m) : null, bs = profile.blockStart || "";
+  const days = Object.keys(logData.days||{}).filter(k=>k>=bs && (!td || k>td) && k<beforeKey && logData.days[k]?.prog?.[id]).sort();
   let off = 0, miss = 0, last = null, note = "";
   const gapRule = k => { if(!last) return; const g = (fromKey(k) - fromKey(last))/864e5;
     if(g > 21){ off = 0; miss = 0; note = "Back to your base after more than 3 weeks off."; } else if(g > 10){ off -= 1; miss = 0; note = "One rep less after more than 10 days off."; } };
@@ -155,19 +155,24 @@ let progSigCache = {at:-1, v:""};
 function progSig(){
   const days = logData.days||{};
   if(progSigCache.at === logRev) return progSigCache.v;
-  let s = (profile.tests||[]).length + ":";
-  for(const k of Object.keys(days)){ const L = days[k]; if(L.prog) s += k + JSON.stringify(L.prog) + JSON.stringify(L.rir||{}) + Object.keys(L.sets||{}).length + Object.values(L.sets||{}).filter(x=>x==="r").length + (L.form||"") + ";"; }
+  let s = (profile.blockStart||"") + JSON.stringify(profile.tests||[]) + ":";
+  for(const k of Object.keys(days)){ const L = days[k]; if(!L.prog) continue; s += k + JSON.stringify(L.prog) + JSON.stringify(L.rir||{}) + (L.form||"") + (L.fullPlan?"F":"");
+    for(const e of Object.values(L.prog)) for(let i=0;i<e.sets;i++) s += String(L.sets?.[`${e.sk}:${e.bi}:${i}`] ?? "-"); s += ";"; }
   progSigCache = {at:logRev, v:String(hashStr(s))}; return progSigCache.v;
 }
-let logRev = 0; function bumpLog(){ logRev++; }
+let logRev = 0; function bumpLog(){ logRev++; try{ progMemo.clear(); }catch(e){} }
 function hashStr(s){ let h = 0; for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; } return h; }
 
 // day form: yellow and red change the numbers of the session itself; "Use full plan today" keeps the plan
+// the raw recovery level of a day (yellow right after a fast day is expected and counts as green)
+function recLevel(k){
+  try{ const l = recovery(fromKey(k)).level; if(l==="y" && isFast(addDays(fromKey(k),-1))) return "g"; return l==="y"||l==="r" ? l : "g"; }catch(e){ return "g"; }
+}
 function formLevel(k){
   const L = logData.days[k]||{};
   if(L.fullPlan) return "g";
   if(L.form && (k !== dateKey(new Date()) || Object.keys(L.sets||{}).length)) return L.form;   // once you trained, the level of that moment stays
-  try{ const l = recovery(fromKey(k)).level; return l==="y"||l==="r" ? l : "g"; }catch(e){ return "g"; }
+  return recLevel(k);
 }
 function formDef(def, lvl){
   if(!def || (lvl!=="y" && lvl!=="r") || def.type==="sport") return def;
@@ -190,7 +195,7 @@ function formDef(def, lvl){
     if(def.keySession) return def;                             // key sessions keep their numbers; the banner offers to move them on red
     if(lvl==="y"){
       d.blocks.forEach(b=>{ const m = /^(\d+) min easy$/.exec(b.n); if(m){ const n = Math.max(20, Math.round(Number(m[1])*0.8/5)*5); b.n = `${n} min easy`; } else if(/tempo|hill sprints/i.test(b.n)){ b.s = 0; b.skip = true; } });
-      d.formNote = "Adjusted for yellow: the run is 20% shorter and truly easy, no tempo or sprints today.";
+      d.min = Math.max(25, Math.round((d.min||0)*0.8)); d.formNote = "Adjusted for yellow: the run is 20% shorter and truly easy, no tempo or sprints today.";
     } else {
       let first = true;
       d.blocks.forEach((b,bi)=>{ if(bi===0) return; if(first && /min easy/.test(b.n)){ b.n = "30 to 45 min walk"; b.d = "Brisk walk instead of running, nose breathing"; first = false; } else if(!/break the fast/i.test(b.n)){ b.s = 0; b.skip = true; } });
@@ -286,7 +291,7 @@ function sessionDef(key, w){
     const maxPU = Number(validTest("pullups"))||7, maxPush = Number(validTest("pushups"))||35;
     const sets = dl? 3 : 4 + (cyc>=2?1:0);
     // reps of the main exercises: test based base, then the progression offset from your logged sets (no fixed weekly step any more)
-    const wkStart = dateKey(addDays(fromKey(profile.blockStart), (wb-1)*7));
+    const wkStart = dateKey(addDays(fromKey(profile.blockStart), (Math.max(1,w)-1)*7));
     const pr = progReps("pullups", Math.max(2, Math.round(maxPU*0.55) + (dl?-1:0)), Math.max(3, Math.round(maxPU*0.75)), wkStart, dl);
     const pu = pr.reps;
     if(key==="strengthA"){
@@ -582,7 +587,7 @@ function rirHtml(def, k){
     <p class="small muted">2 or more with every set done means one rep more next time.</p></div>`;
 }
 function bindRir(root){
-  document.querySelectorAll(root+" [data-rir]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[b.dataset.k] = logData.days[b.dataset.k]||{}; L.rir = L.rir||{}; L.rir[b.dataset.sk] = Number(b.dataset.rir); planCache.clear(); render(); await saveDoc("log", logData); });
+  document.querySelectorAll(root+" [data-rir]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[b.dataset.k] = logData.days[b.dataset.k]||{}; L.rir = L.rir||{}; L.rir[b.dataset.sk] = Number(b.dataset.rir); bumpLog(); planCache.clear(); render(); await saveDoc("log", logData); });
 }
 function bindChecks(root, defFor){
   document.querySelectorAll(root+" .check:not(.mbc)").forEach(btn=>btn.addEventListener("click", async ()=>{
@@ -597,10 +602,10 @@ function bindChecks(root, defFor){
       L.done = L.done||{}; const was = !!L.done[def.sessionKey]; L.done[def.sessionKey] = trainingDone(k,def) || watchConfirmed(k); if(!was && L.done[def.sessionKey]) L.doneAt = Date.now();
       // remember what this block was when you trained it (for the progression) and the day form
       const [sk, bi] = id.split(":"), b = def.blocks[Number(bi)];
-      if(!L.form) L.form = def.form || "g";
-      if(b && b.prog){ L.prog = L.prog||{}; L.prog[b.prog.id] = {sk, bi:Number(bi), sets:b.s, reps:b.prog.reps, lvl: def.form || "g", dl: !!def.deload, full: !!L.fullPlan}; }
+      if(!L.form) L.form = recLevel(k);          // the real recovery level of that day, kept once you trained
+      if(b && b.prog){ L.prog = L.prog||{}; L.prog[b.prog.id] = {sk, bi:Number(bi), sets:b.s, reps:b.prog.reps, lvl: L.form, dl: !!def.deload, full: !!L.fullPlan}; }
     }
-    planCache.clear(); render(); await saveDoc("log", logData);
+    bumpLog(); planCache.clear(); render(); await saveDoc("log", logData);
   }));
   bindRir(root);
 }

@@ -170,7 +170,7 @@ function renderProgress(){
   const wka = document.getElementById("wkAll"); if(wka) wka.onclick = workoutsAll;
   document.querySelectorAll("#v-progress [data-age]").forEach(b=>b.onclick = ()=>{ const x = (otiAge()?.contrib||[])[Number(b.dataset.age)]; if(!x) return;
     openSheet(x.t, `<div class="kv"><div><b>${esc(x.v)}</b><span>your value</span></div><div><b style="color:${x.d<0?"var(--rec-g)":x.d>0.2?"var(--rec-r)":"var(--muted)"}">${x.d>0?"+":""}${x.d.toFixed(1)} years</b><span>effect on Oti Age</span></div></div><p>${esc(x.tip)}</p>`); });
-  $("#btnTest").onclick = async ()=>{ const v=$("#tVal").value.trim(); if(!v) return; const m=$("#tMetric").value; const td=$("#tDate").value; profile.tests.push({metric:m, value: METRICS.find(x=>x.k===m).lower? v : Number(v), date:td}); try{ const lv = recovery(fromKey(td)).level; if(lv==="r"){ const LD = logData.days[td] = logData.days[td]||{}; LD.form = "r"; await saveDoc("log", logData); alert("Recovery was red on that day, so this test does not change your plan. Test again on a green day."); } }catch(e){} planCache.clear(); render(); await saveDoc("profile", profile); writeSchedule(true); };
+  $("#btnTest").onclick = async ()=>{ const v=$("#tVal").value.trim(); if(!v) return; const m=$("#tMetric").value; const td=$("#tDate").value; profile.tests.push({metric:m, value: METRICS.find(x=>x.k===m).lower? v : Number(v), date:td}); try{ if(recovery(fromKey(td)).level==="r"){ profile.tests[profile.tests.length-1].red = true; } }catch(e){} planCache.clear(); render(); if(profile.tests[profile.tests.length-1].red){ const b = $("#btnTest"); if(b) b.insertAdjacentHTML("afterend", `<p class="small" style="color:var(--rec-r)">Saved, but recovery was red that day: this test does not change your plan. Test again on a green day.</p>`); } await saveDoc("profile", profile); writeSchedule(true); };
 }
 function renderSetup(){
   const hd = Object.keys(health.days).sort();
@@ -241,7 +241,7 @@ function autoTick(w){
   const fits = def.type==="run" ? ty==="run" : def.type==="strength" ? ty!=="run" : true;
   if(!fits) return false;
   const L = logData.days[w.date] = logData.days[w.date]||{}; L.auto = L.auto||{};
-  const key = `${w.date} ${w.start}`; if(L.auto[key]) return false; L.auto[key] = true;
+  const key = `${w.date} ${w.start}`; if(L.auto[key]) return false; L.auto[key] = true; if(!L.form) L.form = recLevel(w.date);
   // only training blocks: meals such as "Break the fast" stay for you to tick
   L.sets = L.sets||{}; def.blocks.forEach((b,bi)=>{ if(/break the fast|protein|meal|essen|mahlzeit/i.test(b.n+" "+b.d) && !/warm|cool|min easy|×/i.test(b.n)) return; for(let i=0;i<b.s;i++) L.sets[`${def.sessionKey}:${bi}:${i}`] = true; });
   L.done = L.done||{}; L.done[def.sessionKey] = true; L.autoDone = true; L.doneAt = L.doneAt || Date.now();

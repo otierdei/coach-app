@@ -315,7 +315,7 @@ function tomorrowCardHtml(){
 }
 function renderToday(){
   const now = new Date(), k = dateKey(now), d = dayFromPlan(now), R = recovery(now), w = weekIndex(now), lg = logData.days[k]||{};
-  const s0 = d.session, s = s0 ? {...s0, def: formDef(s0.def, formLevel(k))} : null, adj = s && !s.def.formNote ? adjust(s.def, R.level) : null, wc = weekCounts(mondayOf(now));
+  const s0 = d.session, s = s0 ? {...s0, def: formDef(s0.def, formLevel(k))} : null, adj = s && !s.def.formNote && !lg.fullPlan ? adjust(s.def, R.level) : null, wc = weekCounts(mondayOf(now));
   const sm = sleepMinFor(k), loadDone = s ? doneCount(k, s.def) : 0, hk = health.days[k]||{};
   const tgt = isFast(now) ? [6,10] : strainTarget(R.level), yk = dateKey(addDays(now,-1)), yStrain = strainFor(yk), sessStrain = s ? strainOf(expectedLoad(s.def) + 25) : null;
   const ySteps = health.days[yk]?.steps ?? null, yKcal = health.days[yk]?.kcal ?? null;
@@ -374,8 +374,9 @@ function renderToday(){
     if(R.ill && s.def.hard) html += `<div class="banner r"><b>${esc(R.ill.text)}.</b> Swap today's hard session for 30 min very easy or a walk. If the values are normal tomorrow, the plan continues.</div>`;
     else if(isFast(now)) html += `<div class="banner"><b>Fast day.</b> Truly easy, HR under 145. Break the fast with 40 g protein right after.</div>`;
     else if(R.level==="y" && isFast(addDays(now,-1))) html += `<div class="banner"><b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.</div>`;
+    else if(s.def.formNote) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
     else if(adj) html += `<div class="banner ${R.level}"><b>${esc(adj.t)}.</b> ${adj.lines.map(esc).join(". ")}.</div>`;
-    if(s.def.formNote) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
+    if(false) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
     else if(lg.fullPlan && (R.level==="y"||R.level==="r")) html += `<div class="banner"><b>Full plan today, your choice.</b> It counts normally for your progression. <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Adjust to my recovery again</button></div>`;
     html += `<p class="small muted">This session ≈ strain ${sessStrain.toFixed(0)} for the day, target ${tgt[0]} to ${tgt[1]}.${sessStrain > tgt[1]+1 ? " Above what recovery allows: trim it." : sessStrain < tgt[0]-2 && R.level==="g" && !isFast(now) ? " Room for a 20 to 30 min walk on top." : ""}</p>`;
     html += blocksHtml(s.def, k);
@@ -418,7 +419,9 @@ function renderToday(){
 
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); });
   bindChecks("#v-today", defForKey);
-  $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; planCache.clear(); render(); await saveDoc("log", logData); });
+  $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; else if(!L.form) L.form = recLevel(k);
+    for(const e of Object.values(L.prog||{})) e.full = !!L.fullPlan;
+    bumpLog(); planCache.clear(); render(); await saveDoc("log", logData); });
   bindRhythmCard($("#v-today"));
   document.querySelectorAll("#tomorrowCard [data-tk-open]").forEach(b=>b.onclick = ()=>openTask(b.dataset.tkOpen));
   $("#btnOv").onclick = async ()=>{ const key = $("#ovKey").value; logData.overrides = logData.overrides||{}; profile.overrides = profile.overrides||{};
