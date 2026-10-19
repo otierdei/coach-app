@@ -158,7 +158,7 @@ function applyInbox() {
   while (it.hasNext()) files.push(it.next());
   if (!files.length) return 0;
   files.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
-  var done = subFolder_('processed'), n = 0;
+  var done = subFolder_('processed'), n = 0, briefingPush = null;
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -175,9 +175,43 @@ function applyInbox() {
       f.setDescription('applied as version ' + rec.version + (ch.baseVersion != null && ch.baseVersion !== cur.version ? ' (written against ' + ch.baseVersion + ', merged)' : ''));
       f.moveTo(done);
       n++;
+      if (name === 'briefing') briefingPush = data;
     });
   } finally { lock.releaseLock(); }
+  if (briefingPush) pushBriefing_(briefingPush);
   return n;
+}
+
+/* ---------------- push through the coach push worker (worker/ in the repo, Cloudflare) ----------------
+   Sends one push per new briefing (date + time). The worker checks the same secret key. */
+var PUSH_URL = 'https://coach-push.othniel-erdei.workers.dev';
+function pushBriefing_(data) {
+  var p = PropertiesService.getScriptProperties();
+  try {
+    var tag = String(data.date || '') + ' ' + String(data.time || '');
+    if (p.getProperty('LAST_BRIEF_PUSH') === tag) return;
+    var lines = (data.lines || []).map(function (l) { return String(l).replace(/\s*\[(Certain|Likely|Guessing)\]/g, ''); });
+    var pick = lines.filter(function (l) { return /^(RECOVERY|SESSION|HEADS UP)/.test(l); });
+    var body = (pick.length ? pick : lines.slice(0, 3)).join('\n').slice(0, 500);
+    var res = pushSend_(data.title || 'Morning briefing', body, 'briefing', 'apps-script briefing');
+    p.setProperty('LAST_BRIEF_PUSH', tag);
+    p.setProperty('LAST_PUSH_RESULT', new Date().toISOString() + ' ' + res);
+  } catch (e) {
+    p.setProperty('LAST_PUSH_RESULT', new Date().toISOString() + ' error ' + e);
+  }
+}
+function pushSend_(title, body, tag, by) {
+  var r = UrlFetchApp.fetch(PUSH_URL + '/push', {
+    method: 'post', contentType: 'text/plain', muteHttpExceptions: true,
+    payload: JSON.stringify({key: PropertiesService.getScriptProperties().getProperty('KEY'), title: title, body: body, tag: tag, url: './', by: by})
+  });
+  return r.getResponseCode() + ' ' + r.getContentText().slice(0, 300);
+}
+/** Run once by hand after pasting this version: asks for the new permission (external requests) and sends a test push. */
+function testPush() {
+  var res = pushSend_('Coach test', 'Push from Apps Script works.', 'test', 'apps-script test');
+  Logger.log(res);
+  return res;
 }
 
 /* ---------------- calendar (same shape as the Google Calendar connector) ---------------- */

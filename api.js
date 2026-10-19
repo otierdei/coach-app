@@ -24,6 +24,8 @@
     history.replaceState(null, "", location.pathname + location.search);
   })();
 
+  // ask the browser to keep this app's storage (iOS may otherwise clear a Home Screen app that was not opened for a while)
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p=>{ if(!p) navigator.storage.persist().catch(()=>{}); }).catch(()=>{}); }catch(e){}
   let cfg = LS.get("cfg") || null;
   const versions = LS.get("versions") || {};
   const pending = LS.get("pending") || {};       // doc -> data that could not be saved yet
