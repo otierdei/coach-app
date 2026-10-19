@@ -64,7 +64,7 @@ const store = {
 const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
 /* ================= persistence ================= */
 async function saveDoc(name, obj){
-  store.set(name, obj);
+  store.set(name, obj); try{ bumpLog(); }catch(e){}
   if(!db) return;
   try{ await db.doc("app/"+name).set(JSON.parse(JSON.stringify(obj))); }
   catch(e){ setSync("y", e.code==="quota_exceeded" ? "Storage full" : "Not saved"); }
@@ -76,7 +76,7 @@ async function loadDocs(){
     for(const g of ["baselines","targets","dream"]) profile[g] = {...DEFAULT_PROFILE[g], ...(profile[g]||{})}; }
   else if(p){ profile = structuredClone(DEFAULT_PROFILE); if(Array.isArray(p.calendars)) profile.calendars = p.calendars; if(Array.isArray(p.tests)) profile.tests = p.tests.filter(t=>METRICS.some(m=>m.k===t.metric)); }
   const h = await get("health"); if(h) health = {days:{},workouts:[],sources:[],driveSeen:{},...JSON.parse(JSON.stringify(h))};
-  const l = await get("log"); if(l) logData = {days:{},...JSON.parse(JSON.stringify(l))};
+  const l = await get("log"); if(l) logData = {days:{},...JSON.parse(JSON.stringify(l))}; try{ bumpLog(); }catch(e){}
   const b = await get("briefing"); if(b) briefing = JSON.parse(JSON.stringify(b));
   const hb = await get("habits"); if(hb && hb.version===HABITS_VERSION) habits = mergeHabits(hb);
   const tk = await get("tasks"); if(tk && tk.version===TASKS_VERSION) tasksDoc = mergeTasks(tk);
@@ -91,6 +91,116 @@ function latest(k){
   const t = (profile.tests||[]).filter(x=>x.metric===k).sort((a,b)=>a.date<b.date?1:-1)[0];
   return t ? t.value : profile.baselines[k];
 }
+/* ================= adaptive training (19.10.2026) =================
+   1) Progression from logged sets: each main exercise has a rep offset over its test based base.
+      Logged at the moment you tick a set (log day .prog[id] = {sk, bi, sets, reps, lvl, dl, full}), so history never
+      depends on how the plan is computed later. Rules (double progression with reps in reserve, checked by a reviewer):
+      all sets full + RIR 2 or more -> +1 rep next time; full but RIR 0/1 or no RIR -> hold; any set reduced or open -> miss,
+      two misses in a row -> -1. Neutral: deload weeks, yellow/red days without "full plan", watch ticked sessions.
+      Gap over 10 days -> -1, over 21 days -> back to the base. A new valid max test starts from the base again.
+      Cap about 75% of your max; at the cap the note suggests a harder variant instead of more reps.
+   2) Day form rewrites the numbers of today's session (formDef). */
+function validTest(metric){
+  // a max test logged on a red recovery day does not count (it would lower the base)
+  const ts = (profile.tests||[]).filter(x=>x.metric===metric).sort((a,b)=>a.date<b.date?1:-1);
+  for(const t of ts){ let red = false; try{ red = !!(logData.days[t.date]?.form==="r"); }catch(e){} if(!red) return t.value; }
+  return profile.baselines[metric];
+}
+function testDate(metric){
+  const ts = (profile.tests||[]).filter(x=>x.metric===metric && logData.days[x.date]?.form!=="r").sort((a,b)=>a.date<b.date?1:-1);
+  return ts[0]?.date || null;
+}
+const PROG_METRIC = {pullups:"pullups", chinups:"pullups", push0:"pushups", push1:"pushups", push2:"pushups"};
+const PROG_NEXT = {pullups:"At the cap: keep the reps and make every set explosive to the chest (muscle up prep).", chinups:"At the cap: slow 3 s lowering on every rep.", push0:"At the cap: next phase moves to decline push ups.", push1:"At the cap: next phase moves to archer push ups.", push2:"At the cap: add a 2 s pause at the bottom.", pike0:"At the cap: elevate your feet.", pike1:"At the cap: higher feet or a slower lowering."};
+// walk the logged history of one exercise before a date; returns {off, note}
+function progHistory(id, beforeKey){
+  const m = PROG_METRIC[id], td = m ? testDate(m) : null, from = [td, profile.blockStart].filter(Boolean).sort().pop() || "";
+  const days = Object.keys(logData.days||{}).filter(k=>k>from && k<beforeKey && logData.days[k]?.prog?.[id]).sort();
+  let off = 0, miss = 0, last = null, note = "";
+  const gapRule = k => { if(!last) return; const g = (fromKey(k) - fromKey(last))/864e5;
+    if(g > 21){ off = 0; miss = 0; note = "Back to your base after more than 3 weeks off."; } else if(g > 10){ off -= 1; miss = 0; note = "One rep less after more than 10 days off."; } };
+  for(const k of days){
+    const L = logData.days[k], e = L.prog[id], st = L.sets||{};
+    const states = [...Array(e.sets)].map((_,i)=>st[`${e.sk}:${e.bi}:${i}`]);
+    if(!states.some(Boolean)) continue;                       // session not trained that day
+    gapRule(k); last = k;
+    if(e.dl){ note = "Held: deload week."; continue; }
+    if((e.lvl==="y" || e.lvl==="r") && !e.full){ note = `Held: ${e.lvl==="y"?"yellow":"red"} day.`; continue; }
+    const full = states.every(x=>x===true), rir = L.rir?.[e.sk];
+    if(full){ miss = 0;
+      if(rir!=null && rir>=2){ off += 1; note = `+1 rep: all sets last time, ${rir>=3?"3+":rir} in reserve.`; }
+      else note = rir==null ? "Held: all sets done, but no reserve given." : `Held: all sets done, only ${rir} in reserve.`;
+    } else { miss += 1;
+      if(miss >= 2){ off -= 1; miss = 0; note = "−1 rep: sets reduced or open twice in a row."; }
+      else note = "Held: some sets reduced or open last time.";
+    }
+  }
+  if(last) gapRule(beforeKey);
+  off = clamp(off, -3, 8);
+  return {off, note};
+}
+const progMemo = new Map();
+function progReps(id, base, cap, beforeKey, dl){
+  const sig = id+"|"+base+"|"+cap+"|"+beforeKey+"|"+progSig();
+  if(progMemo.has(sig)) return progMemo.get(sig);
+  const h = progHistory(id, beforeKey);
+  let reps = Math.max(2, base + h.off), note = h.note;
+  if(reps >= cap && !dl){ reps = cap; note = (note ? note + " " : "") + (PROG_NEXT[id] || ""); }
+  const r = {reps, note, off:h.off};
+  if(progMemo.size > 400) progMemo.clear();
+  progMemo.set(sig, r); return r;
+}
+// changes when anything that the progression reads changes (used in the plan cache key)
+let progSigCache = {at:-1, v:""};
+function progSig(){
+  const days = logData.days||{};
+  if(progSigCache.at === logRev) return progSigCache.v;
+  let s = (profile.tests||[]).length + ":";
+  for(const k of Object.keys(days)){ const L = days[k]; if(L.prog) s += k + JSON.stringify(L.prog) + JSON.stringify(L.rir||{}) + Object.keys(L.sets||{}).length + Object.values(L.sets||{}).filter(x=>x==="r").length + (L.form||"") + ";"; }
+  progSigCache = {at:logRev, v:String(hashStr(s))}; return progSigCache.v;
+}
+let logRev = 0; function bumpLog(){ logRev++; }
+function hashStr(s){ let h = 0; for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; } return h; }
+
+// day form: yellow and red change the numbers of the session itself; "Use full plan today" keeps the plan
+function formLevel(k){
+  const L = logData.days[k]||{};
+  if(L.fullPlan) return "g";
+  if(L.form && (k !== dateKey(new Date()) || Object.keys(L.sets||{}).length)) return L.form;   // once you trained, the level of that moment stays
+  try{ const l = recovery(fromKey(k)).level; return l==="y"||l==="r" ? l : "g"; }catch(e){ return "g"; }
+}
+function formDef(def, lvl){
+  if(!def || (lvl!=="y" && lvl!=="r") || def.type==="sport") return def;
+  const d = structuredClone(def); d.form = lvl;
+  const isMain = (b,bi) => bi>0 && !/warm up|cool down|break the fast/i.test(b.n);
+  let mains = d.blocks.map((b,bi)=>isMain(b,bi)?bi:-1).filter(i=>i>=0);
+  // the anchor is the main strength lift (the first exercise with progression, e.g. pull ups), not a jump drill
+  const anchor = mains.find(bi=>d.blocks[bi].prog); if(anchor!=null) mains = [anchor, ...mains.filter(bi=>bi!==anchor)];
+  if(d.type==="strength"){
+    if(lvl==="y"){
+      let cut = 0; mains.slice(1).forEach(bi=>{ const b = d.blocks[bi]; if(b.s>=3){ b.d = b.d.replace(new RegExp("^"+b.s+" × "), (b.s-1)+" × "); b.s -= 1; cut++; } });
+      if(!cut){ d.formNote = "Yellow: the session is already short, keep it as shown and stop every set 2 reps before failure."; }
+      else d.formNote = `Adjusted for yellow: ${d.blocks[mains[0]]?.n || "the main lift"} as planned, one set less on the other exercises, stop every set 2 reps before failure.`;
+    } else {
+      mains.forEach((bi,i)=>{ const b = d.blocks[bi]; if(i===0){ b.d = b.d.replace(new RegExp("^"+b.s+" × "), "2 × "); b.s = Math.min(2,b.s); b.d += " (easy)"; } else { b.s = 0; b.skip = true; } });
+      d.blocks.push({n:"Mobility · 15 min", d:MOB_ROUTINE_LONG, s:1});
+      d.formNote = `Adjusted for red: only ${d.blocks[mains[0]]?.n || "the main lift"}, 2 easy sets, then mobility. Recovery beats training today.`;
+    }
+  } else if(d.type==="run"){
+    if(def.keySession) return def;                             // key sessions keep their numbers; the banner offers to move them on red
+    if(lvl==="y"){
+      d.blocks.forEach(b=>{ const m = /^(\d+) min easy$/.exec(b.n); if(m){ const n = Math.max(20, Math.round(Number(m[1])*0.8/5)*5); b.n = `${n} min easy`; } else if(/tempo|hill sprints/i.test(b.n)){ b.s = 0; b.skip = true; } });
+      d.formNote = "Adjusted for yellow: the run is 20% shorter and truly easy, no tempo or sprints today.";
+    } else {
+      let first = true;
+      d.blocks.forEach((b,bi)=>{ if(bi===0) return; if(first && /min easy/.test(b.n)){ b.n = "30 to 45 min walk"; b.d = "Brisk walk instead of running, nose breathing"; first = false; } else if(!/break the fast/i.test(b.n)){ b.s = 0; b.skip = true; } });
+      d.formNote = "Adjusted for red: walk instead of running.";
+    }
+  } else return def;
+  d.lines = d.blocks.filter(b=>!b.skip).map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`); d.total = d.blocks.reduce((n,b)=>n+b.s,0);
+  return d;
+}
+const MOB_ROUTINE_LONG = "2 rounds: 10 cat cow, 3 world's greatest stretch per side, 60 s deep squat hold, 5 hip 90/90 switches per side, 10 shoulder circles with a towel, 30 s dead hang";
 function paces(){
   const p5 = secs(latest("t5k"))/5;
   return { E1:p5*1.215, E2:p5*1.424, T:p5*1.06, I:p5*0.985, R:p5*0.94, G:secs(profile.targets.t5k)/5 };
@@ -173,13 +283,16 @@ function sessionDef(key, w){
     const m = [50,60,65,50,70,55,75,55,80,80,85,50][wb-1], tempo = [2,5,7,9,10].includes(wb);
     d = {name:"Long run", hard:tempo, min:m+10, type:"run", blocks:[{n:`${tempo? m-(wb>=9?15:10) : m} min easy`, d:E, s:1}].concat(tempo? [{n:`${wb>=9?15:10} min tempo finish`, d:`@ ${pace(P.T)}`, s:1}] : [])};
   } else {
-    const maxPU = Number(latest("pullups"))||7, maxPush = Number(latest("pushups"))||35;
+    const maxPU = Number(validTest("pullups"))||7, maxPush = Number(validTest("pushups"))||35;
     const sets = dl? 3 : 4 + (cyc>=2?1:0);
-    const pu = Math.max(2, Math.round(maxPU*0.55) + (dl?-1:Math.floor(cyc/2)));
+    // reps of the main exercises: test based base, then the progression offset from your logged sets (no fixed weekly step any more)
+    const wkStart = dateKey(addDays(fromKey(profile.blockStart), (wb-1)*7));
+    const pr = progReps("pullups", Math.max(2, Math.round(maxPU*0.55) + (dl?-1:0)), Math.max(3, Math.round(maxPU*0.75)), wkStart, dl);
+    const pu = pr.reps;
     if(key==="strengthA"){
       d = {name:"Strength A", sub:"Pull + legs", hard:true, min:60, type:"strength", blocks:[
         {n:"Broad jumps + lateral bounds", d:"5 broad jumps, then 5 bounds per side, full intent, 90 s rest (soccer power)", s:dl?2:3},
-        {n:"Pull ups", d: wb>=5 ? `${sets} × ${pu}: strict, but pull the last 2 sets explosively to the chest (muscle up prep), 2 min rest` : `${sets} × ${pu} strict, 2 min rest`, s:sets},
+        {n:"Pull ups", d: wb>=5 ? `${sets} × ${pu}: strict, but pull the last 2 sets explosively to the chest (muscle up prep), 2 min rest` : `${sets} × ${pu} strict, 2 min rest`, s:sets, prog:{id:"pullups", reps:pu, note:pr.note}},
         {n:"Bulgarian split squat", d:["12 per leg, bodyweight","10 per leg, 3 s lowering","8 per leg, pause at the bottom, then explode"][phase], s:dl?2:3},
         {n:"Pistol progression", d:["Box pistol to knee height, 5 per leg","Box pistol to a lower box, 5 per leg","Pistol holding a door frame, 4 per leg"][phase], s:3},
         {n:"Nordic curl negatives", d:`${3+phase} reps, feet under the sofa, lower slowly`, s:3},
@@ -187,19 +300,24 @@ function sessionDef(key, w){
         {n:"Hammer curls", d:`8 to 10 @ ${dbKg()} kg`, s:3},
         {n:"Hollow body hold", d:`${30+phase*10} s`, s:3}]};
     } else {
-      const pv = [["Push ups", Math.max(8,Math.round(maxPush*0.6)+(dl?-3:cyc*2))],["Decline push ups (feet on chair)", Math.max(6,Math.round(maxPush*0.45)+(dl?-3:cyc*2))],["Archer push ups", 5+(dl?-1:cyc)]][phase];
+      const pvBase = [["Push ups", Math.max(8,Math.round(maxPush*0.6)+(dl?-3:0)), Math.round(maxPush*0.75)],
+                      ["Decline push ups (feet on chair)", Math.max(6,Math.round(maxPush*0.45)+(dl?-3:0)), Math.round(maxPush*0.6)],
+                      ["Archer push ups", 5+(dl?-1:0), 8]][phase];
+      const pp = progReps("push"+phase, pvBase[1], Math.max(pvBase[1], pvBase[2]), wkStart, dl);
+      const pk = progReps("pike"+(phase===0?0:1), dl?6:8, 12, wkStart, dl);
+      const cu = progReps("chinups", Math.max(3,Math.round(maxPU*0.5)) + (dl?-1:0), Math.max(4, Math.round(maxPU*0.75)), wkStart, dl);
       d = {name:"Strength B", sub:"Push + arms", hard:true, min:60, type:"strength", blocks:[
-        {n:pv[0], d:`${sets} × ${pv[1]}${phase===2?" per side":""}`, s:sets},
-        {n:"Pike push ups", d:phase===0?"8 reps":"8 reps, feet elevated", s:4},
+        {n:pvBase[0], d:`${sets} × ${pp.reps}${phase===2?" per side":""}`, s:sets, prog:{id:"push"+phase, reps:pp.reps, note:pp.note}},
+        {n:"Pike push ups", d:phase===0?`${pk.reps} reps`:`${pk.reps} reps, feet elevated`, s:4, prog:{id:"pike"+(phase===0?0:1), reps:pk.reps, note:pk.note}},
         {n:"Dips", d:`${[6,8,10][phase]} to ${[8,10,12][phase]} reps on the parallel bars at the calisthenics park (two chairs if you train at home), full depth`, s:3},
-        {n:"Chin ups", d:`${Math.max(3,Math.round(maxPU*0.5))} reps, underhand`, s:3},
+        {n:"Chin ups", d:`${cu.reps} reps, underhand`, s:3, prog:{id:"chinups", reps:cu.reps, note:cu.note}},
         {n:"DB overhead triceps extension", d:`10 to 12 @ ${dbKg()} kg, one dumbbell`, s:3},
         {n:"DB curls", d:`8 to 10 @ ${dbKg()} kg`, s:3},
         {n:"Hanging knee raises", d:phase===2?"10, try 3 toes to bar":"10 reps", s:3},
         {n:"False grip hang", d:"20 s, wrists over the bar, shoulders pulled down (muscle up prep)", s:3}]};
     }
   }
-  d.sessionKey = key;
+  d.sessionKey = key; if(dl) d.deload = true;
   return finishDef(d);
 }
 function easyRunDef(min, fast){
@@ -312,7 +430,7 @@ function findSlot(busy, pref, len, earliest, latest){
 }
 const planCache = new Map();
 function weekPlan(monday){
-  const key = dateKey(monday)+"|"+(profile.footballDates||[]).join()+"|"+Object.keys(calEvents).length+"|"+JSON.stringify(profile.sessions)+"|"+profile.blockStart+"|"+JSON.stringify(profile.overrides||{})+"|"+Object.values(calEvents).reduce((n,l)=>n+l.length,0);
+  const key = dateKey(monday)+"|"+(profile.footballDates||[]).join()+"|"+Object.keys(calEvents).length+"|"+JSON.stringify(profile.sessions)+"|"+profile.blockStart+"|"+JSON.stringify(profile.overrides||{})+"|"+Object.values(calEvents).reduce((n,l)=>n+l.length,0)+"|"+progSig();
   if(planCache.has(key)) return planCache.get(key);
   const w = weekIndex(monday);
   const days = [...Array(7)].map((_,i)=>{ const d=addDays(monday,i); const wk=wakeFor(d), bd=bedFor(d); return {date:d, busy:busyFor(d), wake:wk, bed:bd, session:null}; });
@@ -445,22 +563,48 @@ function isDone(k, def){ return !!logData.days[k]?.done?.[def.sessionKey] || wat
 const HOWTO = [[/broad jump/i,"broad jump lateral bound technique"],[/pull ups/i,"strict pull up technique tutorial"],[/chin ups/i,"chin up technique tutorial"],[/bulgarian/i,"bulgarian split squat bodyweight technique"],[/pistol/i,"box pistol squat progression tutorial"],[/nordic/i,"nordic curl negative at home tutorial"],[/copenhagen/i,"copenhagen plank knee version tutorial"],[/hammer curl/i,"dumbbell hammer curl technique"],[/db curls/i,"dumbbell curl technique"],[/hollow/i,"hollow body hold tutorial"],[/archer push/i,"archer push up progression tutorial"],[/decline push/i,"decline push up technique"],[/pike push/i,"pike push up tutorial"],[/^push ups/i,"perfect push up technique"],[/^dips/i,"parallel bar dips technique"],[/overhead triceps/i,"dumbbell overhead triceps extension technique"],[/hanging knee/i,"hanging knee raise technique"],[/false grip/i,"false grip hang muscle up tutorial"],[/warm up \+ mobility/i,"5 minute full body warm up mobility routine"]];
 function howto(n){ const h = HOWTO.find(([re])=>re.test(n)); return h ? `<a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(h[1])}" target="_blank" rel="noopener" style="color:var(--lift);font-weight:600;text-decoration:none;white-space:nowrap">▶ Video</a>` : ""; }
 function blocksHtml(def, k){
-  const s = logData.days[k]?.sets || {};
+  const s = logData.days[k]?.sets || {}, str = def.type==="strength";
   return def.blocks.map((b,bi)=>{
-    let on = 0; const boxes = [...Array(b.s)].map((_,i)=>{ const id=`${def.sessionKey}:${bi}:${i}`, c=!!s[id]; if(c) on++; return `<button class="check ${c?"on":""}" data-k="${k}" data-id="${id}" aria-pressed="${c}" aria-label="${esc(b.n)} set ${i+1}"><span class="n">${i+1}</span>${CHECK_SVG}</button>`; }).join("");
-    return `<div class="block ${on===b.s?"done":""}"><div class="bh"><span class="bn">${esc(b.n)}</span><span class="row" style="gap:10px;flex-wrap:nowrap">${def.type==="strength"?howto(b.n):""}<span class="small muted mono">${on}/${b.s}</span></span></div><div class="bd">${esc(b.d)}</div><div class="sets">${boxes}</div></div>`;
-  }).join("");
+    if(b.skip) return "";
+    let on = 0; const boxes = [...Array(b.s)].map((_,i)=>{ const id=`${def.sessionKey}:${bi}:${i}`, v = s[id], c=!!v, rd = v==="r"; if(c) on++;
+      return `<button class="check ${c?"on":""} ${rd?"rd":""}" data-k="${k}" data-id="${id}" aria-pressed="${c}" aria-label="${esc(b.n)} set ${i+1}${rd?" reduced":""}"><span class="n">${i+1}</span>${rd?`<span class="rdm">−</span>`:CHECK_SVG}</button>`; }).join("");
+    const note = b.prog?.note ? `<div class="small" style="color:var(--lift);margin-top:2px">${esc(b.prog.note)}</div>` : "";
+    return `<div class="block ${on===b.s?"done":""}"><div class="bh"><span class="bn">${esc(b.n)}</span><span class="row" style="gap:10px;flex-wrap:nowrap">${str?howto(b.n):""}<span class="small muted mono">${on}/${b.s}</span></span></div><div class="bd">${esc(b.d)}</div>${note}<div class="sets">${boxes}</div></div>`;
+  }).join("") + (str ? `<p class="small muted" style="margin:4px 2px 0">Tap a set once for done, twice for reduced reps, a third time to clear.</p>` : "");
+}
+// reps in reserve after the last sets of a strength session (0, 1, 2, 3+); drives the progression
+function rirHtml(def, k){
+  if(!def || def.type!=="strength") return "";
+  const L = logData.days[k]||{}, v = L.rir?.[def.sessionKey];
+  if(!doneCount(k, def)) return "";
+  return `<div class="card" style="gap:8px"><div style="font-weight:700">How many more reps could you have done on your last sets?</div>
+    <div class="row" style="gap:8px">${[0,1,2,3].map(n=>`<button type="button" class="${v===n?"primary":"ghost"}" data-rir="${n}" data-k="${k}" data-sk="${def.sessionKey}">${n===3?"3+":n}</button>`).join("")}</div>
+    <p class="small muted">2 or more with every set done means one rep more next time.</p></div>`;
+}
+function bindRir(root){
+  document.querySelectorAll(root+" [data-rir]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[b.dataset.k] = logData.days[b.dataset.k]||{}; L.rir = L.rir||{}; L.rir[b.dataset.sk] = Number(b.dataset.rir); planCache.clear(); render(); await saveDoc("log", logData); });
 }
 function bindChecks(root, defFor){
   document.querySelectorAll(root+" .check:not(.mbc)").forEach(btn=>btn.addEventListener("click", async ()=>{
     const k = btn.dataset.k, id = btn.dataset.id, L = logData.days[k] = logData.days[k]||{};
-    L.sets = L.sets||{}; if(L.sets[id]) delete L.sets[id]; else L.sets[id] = true;
     const def = defFor(k);
-    if(def){ L.done = L.done||{}; const was = !!L.done[def.sessionKey]; L.done[def.sessionKey] = trainingDone(k,def) || watchConfirmed(k); if(!was && L.done[def.sessionKey]) L.doneAt = Date.now(); }
-    render(); await saveDoc("log", logData);
+    L.sets = L.sets||{};
+    const cur = L.sets[id];
+    if(def && def.type==="strength"){ if(!cur) L.sets[id] = true; else if(cur===true) L.sets[id] = "r"; else delete L.sets[id]; }
+    else { if(cur) delete L.sets[id]; else L.sets[id] = true; }
+    L.manual = true;
+    if(def){
+      L.done = L.done||{}; const was = !!L.done[def.sessionKey]; L.done[def.sessionKey] = trainingDone(k,def) || watchConfirmed(k); if(!was && L.done[def.sessionKey]) L.doneAt = Date.now();
+      // remember what this block was when you trained it (for the progression) and the day form
+      const [sk, bi] = id.split(":"), b = def.blocks[Number(bi)];
+      if(!L.form) L.form = def.form || "g";
+      if(b && b.prog){ L.prog = L.prog||{}; L.prog[b.prog.id] = {sk, bi:Number(bi), sets:b.s, reps:b.prog.reps, lvl: def.form || "g", dl: !!def.deload, full: !!L.fullPlan}; }
+    }
+    planCache.clear(); render(); await saveDoc("log", logData);
   }));
+  bindRir(root);
 }
-function defForKey(k){ const d = dayFromPlan(fromKey(k)); return d?.session?.def || null; }
+function defForKey(k){ const d = dayFromPlan(fromKey(k)); return d?.session?.def ? formDef(d.session.def, formLevel(k)) : null; }
 
 /* ================= timeline ================= */
 function lastMealFor(d){

@@ -315,7 +315,7 @@ function tomorrowCardHtml(){
 }
 function renderToday(){
   const now = new Date(), k = dateKey(now), d = dayFromPlan(now), R = recovery(now), w = weekIndex(now), lg = logData.days[k]||{};
-  const s = d.session, adj = s ? adjust(s.def, R.level) : null, wc = weekCounts(mondayOf(now));
+  const s0 = d.session, s = s0 ? {...s0, def: formDef(s0.def, formLevel(k))} : null, adj = s && !s.def.formNote ? adjust(s.def, R.level) : null, wc = weekCounts(mondayOf(now));
   const sm = sleepMinFor(k), loadDone = s ? doneCount(k, s.def) : 0, hk = health.days[k]||{};
   const tgt = isFast(now) ? [6,10] : strainTarget(R.level), yk = dateKey(addDays(now,-1)), yStrain = strainFor(yk), sessStrain = s ? strainOf(expectedLoad(s.def) + 25) : null;
   const ySteps = health.days[yk]?.steps ?? null, yKcal = health.days[yk]?.kcal ?? null;
@@ -375,8 +375,11 @@ function renderToday(){
     else if(isFast(now)) html += `<div class="banner"><b>Fast day.</b> Truly easy, HR under 145. Break the fast with 40 g protein right after.</div>`;
     else if(R.level==="y" && isFast(addDays(now,-1))) html += `<div class="banner"><b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.</div>`;
     else if(adj) html += `<div class="banner ${R.level}"><b>${esc(adj.t)}.</b> ${adj.lines.map(esc).join(". ")}.</div>`;
+    if(s.def.formNote) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
+    else if(lg.fullPlan && (R.level==="y"||R.level==="r")) html += `<div class="banner"><b>Full plan today, your choice.</b> It counts normally for your progression. <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Adjust to my recovery again</button></div>`;
     html += `<p class="small muted">This session ≈ strain ${sessStrain.toFixed(0)} for the day, target ${tgt[0]} to ${tgt[1]}.${sessStrain > tgt[1]+1 ? " Above what recovery allows: trim it." : sessStrain < tgt[0]-2 && R.level==="g" && !isFast(now) ? " Room for a 20 to 30 min walk on top." : ""}</p>`;
     html += blocksHtml(s.def, k);
+    html += rirHtml(s.def, k);
     html += `<div class="row"><label class="f" for="rpe" style="grid-auto-flow:column;align-items:center;gap:8px">Session effort (RPE)<select id="rpe"><option value="">–</option>${[...Array(10)].map((_,i)=>`<option ${lg.rpe==i+1?"selected":""}>${i+1}</option>`).join("")}</select></label></div>`;
   } else if(d.conflict) html += `<p class="small muted">The calendar left no room for ${esc(d.conflict)} today or on a flex day. Skip it rather than cramming it into a late night.</p>`;
   else if(isFast(now)) html += `<p class="small muted">Fast day. No run planned: nothing refills your tank until dinner. Walk 30 to 45 min, keep coffee before ${esc(profile.coffeeCutoff)}.</p>`;
@@ -415,6 +418,7 @@ function renderToday(){
 
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); });
   bindChecks("#v-today", defForKey);
+  $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; planCache.clear(); render(); await saveDoc("log", logData); });
   bindRhythmCard($("#v-today"));
   document.querySelectorAll("#tomorrowCard [data-tk-open]").forEach(b=>b.onclick = ()=>openTask(b.dataset.tkOpen));
   $("#btnOv").onclick = async ()=>{ const key = $("#ovKey").value; logData.overrides = logData.overrides||{}; profile.overrides = profile.overrides||{};

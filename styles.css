@@ -102,6 +102,8 @@ label.f{display:grid;gap:5px;font-size:12.5px;color:var(--muted)}
 .check .n{color:var(--muted)}
 .check.on{background:var(--rec-g);border-color:var(--rec-g);color:var(--card)}
 .check.on .n{display:none}
+.check.rd{background:var(--rec-y);border-color:var(--rec-y);color:var(--card)}
+.check .rdm{font-size:22px;font-weight:800;line-height:1;grid-area:1/1}
 .check svg{width:18px;height:18px}
 .check .n,.check svg{grid-area:1/1}
 .chip{border:1px solid var(--line)}

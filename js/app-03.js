@@ -8,7 +8,7 @@ function renderWeek(){
     <div class="row"><button class="ghost" id="wkPrev" aria-label="Previous week">←</button><button class="ghost" id="wkNow">This week</button><button class="ghost" id="wkNext" aria-label="Next week">→</button></div>`;
   if(weekOffset>1) html += `<div class="banner">Calendar events load for this and next week only. Later weeks use your template.</div>`;
   for(const d of P.days){
-    const k = dateKey(d.date), def = d.session?.def, dn = def ? doneCount(k, def) : 0;
+    const k = dateKey(d.date), def = d.session?.def ? formDef(d.session.def, formLevel(dateKey(d.date))) : null, dn = def ? doneCount(k, def) : 0;
     html += `<div class="wday ${k===today?"today":""}" data-wday="${k}" style="cursor:pointer">
       ${ring(def? dn/def.total : 0, def?(isDone(k,def)?"var(--rec-g)":"var(--load)"):"var(--track)", 52, 6, `<span style="font-size:13px">${SHORT[d.date.getDay()]}</span>`, "", 13)}
       <div style="display:grid;gap:4px;min-width:0"><div class="spread" style="flex-wrap:nowrap;align-items:flex-start"><span style="font-weight:700;display:inline-flex;align-items:center;gap:8px;min-width:0" class="${def?`ty-${typeKey(def.type)}`:""}">${def?tbadge(def.type,"sm"):""}<span class="tname" style="min-width:0">${def?esc(def.name):d.conflict?"No slot":d.date.getDay()===6?"Day off":"Rest"}${def?`<span class="muted small" style="white-space:nowrap"> · ${fmt(d.session.start)}</span>`:""}</span></span><span class="small muted mono">${d.date.getDate()}.${d.date.getMonth()+1}.</span></div>
@@ -170,7 +170,7 @@ function renderProgress(){
   const wka = document.getElementById("wkAll"); if(wka) wka.onclick = workoutsAll;
   document.querySelectorAll("#v-progress [data-age]").forEach(b=>b.onclick = ()=>{ const x = (otiAge()?.contrib||[])[Number(b.dataset.age)]; if(!x) return;
     openSheet(x.t, `<div class="kv"><div><b>${esc(x.v)}</b><span>your value</span></div><div><b style="color:${x.d<0?"var(--rec-g)":x.d>0.2?"var(--rec-r)":"var(--muted)"}">${x.d>0?"+":""}${x.d.toFixed(1)} years</b><span>effect on Oti Age</span></div></div><p>${esc(x.tip)}</p>`); });
-  $("#btnTest").onclick = async ()=>{ const v=$("#tVal").value.trim(); if(!v) return; const m=$("#tMetric").value; profile.tests.push({metric:m, value: METRICS.find(x=>x.k===m).lower? v : Number(v), date:$("#tDate").value}); planCache.clear(); render(); await saveDoc("profile", profile); writeSchedule(true); };
+  $("#btnTest").onclick = async ()=>{ const v=$("#tVal").value.trim(); if(!v) return; const m=$("#tMetric").value; const td=$("#tDate").value; profile.tests.push({metric:m, value: METRICS.find(x=>x.k===m).lower? v : Number(v), date:td}); try{ const lv = recovery(fromKey(td)).level; if(lv==="r"){ const LD = logData.days[td] = logData.days[td]||{}; LD.form = "r"; await saveDoc("log", logData); alert("Recovery was red on that day, so this test does not change your plan. Test again on a green day."); } }catch(e){} planCache.clear(); render(); await saveDoc("profile", profile); writeSchedule(true); };
 }
 function renderSetup(){
   const hd = Object.keys(health.days).sort();
