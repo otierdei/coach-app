@@ -162,6 +162,74 @@
       : "Opened Claude in a new tab. The prompt was too long for the link, so it is on your clipboard: paste it there."};
   }
 
+  /* ---------- Push: coach push worker on Cloudflare (worker/ in this repo) ----------
+     Uses the same secret key as the Apps Script backend; the worker only keeps its hash.
+     iPhone: works only when the app is opened from the Home Screen (iOS 16.4+). */
+  const PUSH_URL = "https://coach-push.othniel-erdei.workers.dev";
+  const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  const standalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const deviceName = () => /iPhone/.test(navigator.userAgent) ? "iPhone" : /iPad/.test(navigator.userAgent) ? "iPad" : /Mac/.test(navigator.userAgent) ? "Mac" : "Browser";
+  async function pushCall(path, body){
+    const r = await fetch(PUSH_URL + path, {method: body ? "POST" : "GET", headers: body ? {"Content-Type":"text/plain;charset=utf-8"} : undefined, body: body ? JSON.stringify(body) : undefined});
+    const j = await r.json().catch(()=>({error:"bad answer"}));
+    if(!r.ok || j.error) throw Object.assign(new Error(j.error || ("HTTP "+r.status)), {code: j.code || r.status});
+    return j;
+  }
+  function keyToBytes(b64){ const s = b64.replace(/-/g,"+").replace(/_/g,"/"); const bin = atob(s + "===".slice((s.length+3)%4)); return Uint8Array.from(bin, c=>c.charCodeAt(0)); }
+  async function pushSubscribe({ask}={}){
+    if(!configured()) throw new Error("Connect the backend first.");
+    if(!pushSupported()) throw new Error(standalone() ? "This browser has no push support." : "Open the app from the Home Screen icon, then try again.");
+    if(Notification.permission !== "granted"){
+      if(!ask) return null;
+      const p = await Notification.requestPermission();
+      if(p !== "granted") throw new Error("Notifications are not allowed. iPhone: Settings > Notifications > Coach.");
+    }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    const last = LS.get("pushEndpoint");
+    if(!sub){
+      const {publicKey} = await pushCall("/vapid");
+      sub = await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyToBytes(publicKey)});
+    }
+    await pushCall("/setup", {key: cfg.key});
+    const j = sub.toJSON();
+    await pushCall("/subscribe", {key: cfg.key, device: deviceName(), subscription: {endpoint: j.endpoint, keys: j.keys}, replaces: last && last !== j.endpoint ? last : undefined});
+    LS.set("pushEndpoint", j.endpoint); LS.set("pushChecked", Date.now());
+    return j.endpoint;
+  }
+  // each time the app comes to the front: re-send the subscription (iOS can drop or rotate it without notice)
+  async function pushRefresh(){
+    try{
+      if(!configured() || !pushSupported() || Notification.permission !== "granted") return;
+      if(Date.now() - (LS.get("pushChecked")||0) < 6*3600*1000) return;
+      await pushSubscribe({ask:false});
+    }catch(e){ LS.set("pushError", String(e.message||e)); }
+  }
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) pushRefresh(); });
+  setTimeout(pushRefresh, 4000);
+  const pushTest = () => pushCall("/push", {key: cfg.key, title: "Coach test", body: "Push from your Coach app works. " + new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}), tag: "test", by: "app test"});
+  const pushStatus = () => pushCall("/status", {key: cfg.key});
+
+  function pushHtml(e){
+    const perm = pushSupported() ? Notification.permission : "unsupported";
+    const on = perm === "granted" && LS.get("pushEndpoint");
+    const hint = !standalone() && /iPhone|iPad/.test(navigator.userAgent) ? "Open the app from the Home Screen icon to turn on push." :
+      perm === "denied" ? "Blocked. iPhone: Settings > Notifications > Coach > Allow." : "";
+    return `<div class="card" id="pushCard"><div class="spread"><h3>Push notifications</h3><span class="chip ${on?"g":"y"}"><span class="dot"></span>${on?"On":"Off"}</span></div>
+      <p class="small muted">Briefings and reminders come straight from your app. Claude's own pushes stay on until this has worked 3 times.</p>
+      <div class="row"><button class="primary" id="pushOn">${on?"Renew push":"Turn on push"}</button><button class="ghost" id="pushTest" ${on?"":"disabled"}>Send test push</button><button class="ghost" id="pushStat" ${configured()?"":"disabled"}>Status</button></div>
+      <p id="pushMsg" class="small muted">${e(hint || LS.get("pushError") || "")}</p></div>`;
+  }
+  function bindPush(){
+    const m = t => { const x = document.getElementById("pushMsg"); if(x) x.textContent = t; };
+    const on = document.getElementById("pushOn"); if(!on) return;
+    on.onclick = async ()=>{ m("Turning on…"); try{ await pushSubscribe({ask:true}); LS.del("pushError"); m("Push is on. Tap \"Send test push\"."); const t = document.getElementById("pushTest"); if(t) t.disabled = false; }catch(err){ m("Not on: " + (err.message||err)); } };
+    const t = document.getElementById("pushTest");
+    if(t) t.onclick = async ()=>{ m("Sending…"); try{ const r = await pushTest(); m(r.delivered ? `Sent to ${r.delivered} device(s). It should arrive in a few seconds.` : `Not delivered: ${JSON.stringify(r.results||r)}`); }catch(err){ m("Error: " + (err.message||err)); } };
+    const s = document.getElementById("pushStat");
+    if(s) s.onclick = async ()=>{ m("Checking…"); try{ const r = await pushStatus(); m(`${r.subs.length} device(s). Last: ` + (r.log.slice(0,3).map(x=>`${x.ts.slice(5,16).replace("T"," ")} ${x.kind} ${x.delivered??""}/${x.sent??""}`).join(" · ") || "nothing yet")); }catch(err){ m("Error: " + (err.message||err)); } };
+  }
+
   /* ---------- Setup card ---------- */
   function connectLink(){
     if(!configured()) return "";
@@ -176,9 +244,10 @@
       <p class="small muted">Your data lives in the Google Drive folder "Coach Data", read and written by your own Apps Script web app. URL and key are stored only on this device.</p>
       <label class="f" for="apiUrl">Web app URL<input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${e(cfg?.url||"")}"></label>
       <label class="f" for="apiKey">Secret key<input id="apiKey" type="password" autocomplete="off" value="${e(cfg?.key||"")}"></label>
-      <div class="row"><button class="primary" id="apiSave">Connect</button><button class="ghost" id="apiLink" ${configured()?"":"disabled"}>Copy link for iPhone</button><span id="apiMsg" class="small muted">${p?`${p} change(s) waiting to sync. `:""}${e(lastErr && online===false ? lastErr : "")}</span></div></div>`;
+      <div class="row"><button class="primary" id="apiSave">Connect</button><button class="ghost" id="apiLink" ${configured()?"":"disabled"}>Copy link for iPhone</button><span id="apiMsg" class="small muted">${p?`${p} change(s) waiting to sync. `:""}${e(lastErr && online===false ? lastErr : "")}</span></div></div>` + pushHtml(e);
   }
   function bindSetup(){
+    bindPush();
     const s = document.getElementById("apiSave"); if(!s) return;
     s.onclick = async ()=>{
       const url = document.getElementById("apiUrl").value.trim(), key = document.getElementById("apiKey").value.trim();
@@ -192,5 +261,6 @@
   }
 
   window.API = {db, mcp, sample, openCoach, coachUrl, configured, setupCard, bindSetup, call, flushPending,
+    push: {subscribe: pushSubscribe, test: ()=>pushTest(), status: ()=>pushStatus(), url: PUSH_URL},
     status: ()=>({configured: configured(), online, pending: Object.keys(pending).length, lastErr}), DOCS};
 })();

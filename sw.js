@@ -1,6 +1,25 @@
 /* Offline cache for the app shell. Data requests (Apps Script) always go to the network;
    the app itself keeps the last data in localStorage, so it opens offline with the last state. */
-const CACHE = "coach-v2";
+const CACHE = "coach-v3";
+
+/* Push from the coach push worker. Every push must show a notification, otherwise Safari may revoke the permission. */
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = {body: e.data ? e.data.text() : ""}; }
+  const title = d.title || "Coach";
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || "", tag: d.tag || undefined, data: {url: d.url || "./"},
+    icon: "icons/icon-192.png", badge: "icons/icon-192.png"
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const target = new URL((e.notification.data && e.notification.data.url) || "./", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({type: "window", includeUncontrolled: true}).then(cs => {
+    for (const c of cs) { if (c.url.startsWith(self.registration.scope)) { c.focus(); if (c.navigate && target !== c.url) c.navigate(target); return; } }
+    return self.clients.openWindow(target);
+  }));
+});
 const SHELL = ["./", "index.html", "styles.css", "api.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
