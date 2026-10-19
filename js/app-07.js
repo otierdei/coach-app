@@ -197,9 +197,15 @@ async function toggleStage(t, sid){
 }
 async function pinToday(t){
   const k = todayK();
-  if(t.today===k){ t.today = null; renderTasksEverywhere(); await saveTasks(); return; }
-  if(todayTasks().length>=3){ alertBanner(L("Today holds 3 tasks. Finish or unpin one first.","Heute hat schon 3 Aufgaben. Erst eine erledigen oder lösen.")); return; }
-  t.today = k; renderTasksEverywhere(); await saveTasks();
+  if(t.today===k){ t.today = null; if(t.autoToday===k){ if(tasksDoc.autoSkip?.d!==k) tasksDoc.autoSkip = {d:k, ids:[]}; tasksDoc.autoSkip.ids.push(t.id); } t.autoToday = null; renderTasksEverywhere(); await saveTasks(); return; }
+  if(todayTasks().length>=3){
+    // a manual star replaces the lowest ranked auto pick
+    const autos = todayTasks().filter(x=>x.autoToday===k).sort(byRank);
+    if(!autos.length){ alertBanner(L("Today holds 3 tasks. Finish or unpin one first.","Heute hat schon 3 Aufgaben. Erst eine erledigen oder lösen.")); return; }
+    const out = autos[autos.length-1]; out.today = null; out.autoToday = null;
+    if(tasksDoc.autoSkip?.d!==k) tasksDoc.autoSkip = {d:k, ids:[]}; tasksDoc.autoSkip.ids.push(out.id);
+  }
+  t.today = k; t.autoToday = null; renderTasksEverywhere(); await saveTasks();
 }
 function alertBanner(msg){ const el = $("#tkMsg"); if(el){ el.textContent = msg; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(()=>el.hidden = true, 4000); } }
 
@@ -207,7 +213,7 @@ function alertBanner(msg){ const el = $("#tkMsg"); if(el){ el.textContent = msg;
 function tBar(t, big){ const p = tProgress(t); return `<div class="bar${big?" tk-big":""}" role="img" aria-label="${Math.round(p*100)}%"><i style="width:${(p*100).toFixed(1)}%;background:${t.done?"var(--rec-g)":"var(--focus)"}"></i></div>`; }
 function taskRow(t, opts={}){
   const di = dueInfo(t), st = t.stages||[], p = tProgress(t), ns = nextStage(t), running = tasksDoc.timer?.task===t.id;
-  const meta = [opts.showArea? esc(areaLabel(t)) : "", st.length? `${st.filter(s=>s.done).length}/${st.length} ${L("stages","Etappen")}${ns&&!t.done?` · ${L("next","als Nächstes")}: ${esc(ns.n)}`:""}` : (t.next? `${L("Next","Nächster Schritt")}: ${esc(t.next)}` : ""), t.rec?.freq? (t.rec.freq==="weekly"? L("weekly","wöchentlich") : L("monthly","monatlich")) : ""].filter(Boolean).join(" · ");
+  const meta = [opts.showArea? esc(areaLabel(t)) : "", st.length? `${st.filter(s=>s.done).length}/${st.length} ${L("stages","Etappen")}${ns&&!t.done?` · ${L("next","als Nächstes")}: ${esc(ns.n)}`:""}` : (t.next? `${L("Next","Nächster Schritt")}: ${esc(t.next)}` : ""), t.rec?.freq? (t.rec.freq==="weekly"? L("weekly","wöchentlich") : L("monthly","monatlich")) : "", (t.autoToday && t.autoToday===todayK() && t.today===todayK())? L("auto pick","automatisch") : ""].filter(Boolean).join(" · ");
   return `<div class="tk-row${t.done?" done":""}${running?" run":""}">
     <button type="button" class="check ${t.done?"on":""}" data-tk-done="${t.id}" aria-pressed="${t.done}" aria-label="${L("Done","Erledigt")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></button>
     <button type="button" class="tk-main" data-tk-open="${t.id}"><span class="tk-t">${t.prio==="high"?`<span class="tk-hi" aria-label="${L("High priority","Hohe Priorität")}">!</span>`:""}${esc(t.title)}</span>${meta?`<span class="tk-m">${meta}</span>`:""}${st.length?`<span class="tk-b">${tBar(t)}<span class="mono tk-p">${Math.round(p*100)}%</span></span>`:""}</button>
@@ -272,6 +278,21 @@ function taskRank(t){
   return {gegot:2, gegos:3, ignite:4, ets:5, raum:6}[t.area] ?? 7;
 }
 function byRank(a,b){ return (taskRank(a)-taskRank(b)) || ((a.due||"9")<(b.due||"9")?-1:(a.due||"9")>(b.due||"9")?1:0) || ((b.prio==="high")-(a.prio==="high")); }
+// Auto Top 3 (Oti, 12.10.2026): free slots are filled on open. 1) recurring tasks due today or earlier, 2) overdue, due today, or high priority due tomorrow, ranked by the hierarchy. Own stars are never touched; an unstarred auto pick stays out for the day.
+function autoCandidates(){
+  const k = todayK(), tmr = dateKey(addDays(fromKey(k),1)), skip = (tasksDoc.autoSkip?.d===k ? tasksDoc.autoSkip.ids : []) || [];
+  const open = openTasks().filter(t=>t.today!==k && !skip.includes(t.id));
+  const rec = open.filter(t=>t.rec?.freq && t.due && t.due<=k).sort(byRank);
+  const rest = open.filter(t=>!rec.includes(t) && t.due && (t.due<=k || (t.prio==="high" && t.due<=tmr))).sort(byRank);
+  return [...rec, ...rest];
+}
+function autoTop3(){
+  if(!tasksDoc?.tasks) return false;
+  const k = todayK(); let free = 3 - todayTasks().length; if(free<=0) return false;
+  const picks = autoCandidates().slice(0, free); if(!picks.length) return false;
+  for(const t of picks){ t.today = k; t.autoToday = k; }
+  return true;
+}
 function viewToday(){
   const k = todayK(), pinned = todayTasks(), open = openTasks();
   const overdue = open.filter(t=>t.due && t.due<k && t.today!==k).sort((a,b)=>a.due<b.due?-1:1);
@@ -340,26 +361,3 @@ function todayTasksCard(){
     ${pinned.length?`<div class="list">${pinned.map(t=>taskRow(t,{showArea:true})).join("")}</div>`:`<p class="small muted">${L("No tasks picked for today.","Keine Aufgaben für heute gewählt.")}</p>`}
     ${overdue||inbox?`<p class="small" style="color:var(--y-ink)">${[overdue?L(`${overdue} overdue`,`${overdue} überfällig`):"", inbox?L(`${inbox} to sort`,`${inbox} zu sortieren`):""].filter(Boolean).join(" · ")}</p>`:""}</div>`;
 }
-function renderTasksEverywhere(){
-  if(tab==="tasks") renderTasks();
-  else if(tab==="today"){ const c = document.querySelector("#v-today [data-tkcard]"); if(c){ c.outerHTML = todayTasksCard(); bindTasks($("#v-today")); tickClock(); } }
-  if(!$("#sheet").hidden && $("#sheetBody").dataset.tk) openTask($("#sheetBody").dataset.tk, true);
-}
-function bindTasks(root){
-  root.querySelectorAll("[data-tk-seg]").forEach(b=>b.onclick = ()=>{ taskSeg = b.dataset.tkSeg; try{ sessionStorage.setItem("ohc-taskseg", taskSeg); }catch(e){} renderTasks(); });
-  root.querySelectorAll("[data-tk-done]").forEach(b=>b.onclick = ()=>{ const now = Date.now(); if(now - tkTapAt < 900) return; tkTapAt = now; const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkDone); if(t) setDone(t, !t.done); });
-  root.querySelectorAll("[data-tk-open]").forEach(b=>b.onclick = ()=>openTask(b.dataset.tkOpen));
-  root.querySelectorAll("[data-tk-pin]").forEach(b=>b.onclick = ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkPin); if(t) pinToday(t); });
-  root.querySelectorAll("[data-tk-stop]").forEach(b=>b.onclick = ()=>stopTimer());
-  root.querySelectorAll("[data-tk-new]").forEach(b=>b.onclick = ()=>openTask(null, false, {area:b.dataset.tkNew}));
-  root.querySelectorAll("[data-goto-tasks]").forEach(b=>b.onclick = ()=>{ taskSeg = "today"; switchTab("tasks"); });
-  root.querySelectorAll("details.tk-area").forEach(d=>d.addEventListener("toggle", ()=>{ d.open ? tkOpenAreas.add(d.dataset.tkArea) : tkOpenAreas.delete(d.dataset.tkArea); try{ sessionStorage.setItem("ohc-tkareas", JSON.stringify([...tkOpenAreas])); }catch(e){} }));
-  const qa = root.querySelector("#tkQuickAdd"), qi = root.querySelector("#tkQuick");
-  const add = async ()=>{ const title = qi.value.trim(); if(!title) return; const [area, sub] = (root.querySelector("#tkQuickArea").value||"|").split("|");
-    tasksDoc.tasks.push(newTask({title, area:area||null, sub:sub||null})); qi.value = ""; renderTasks(); await saveTasks(); };
-  if(qa) qa.onclick = add; if(qi) qi.onkeydown = e=>{ if(e.key==="Enter") add(); };
-  root.querySelectorAll("[data-tk-keep]").forEach(b=>b.onclick = async ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkKeep); if(!t) return; const [a,s] = (root.querySelector(`[data-tk-revarea="${t.id}"]`).value||"|").split("|"); t.area = a||null; t.sub = s||null; t.review = false; renderTasks(); await saveTasks(); });
-  root.querySelectorAll("[data-tk-revdone]").forEach(b=>b.onclick = async ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkRevdone); if(!t) return; t.review = false; t.done = true; t.doneAt = null; renderTasks(); await saveTasks(); });
-  root.querySelectorAll("[data-tk-del]").forEach(b=>b.onclick = async ()=>{ if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent = L("Tap again","Nochmal tippen"); return; } tasksDoc.tasks = tasksDoc.tasks.filter(x=>x.id!==b.dataset.tkDel); renderTasks(); await saveTasks(); });
-}
-

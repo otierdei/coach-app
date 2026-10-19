@@ -1,6 +1,29 @@
 /* Oti Hybrid Coach, GitHub version. Generated from the claude.ai artifact v67 by tools/build_from_v67.py.
    db, mcp and sample are provided by api.js (Google Apps Script backend).
    The code is split into several classic scripts that share one global scope; load them in order. */
+function renderTasksEverywhere(){
+  if(tab==="tasks") renderTasks();
+  else if(tab==="today"){ const c = document.querySelector("#v-today [data-tkcard]"); if(c){ c.outerHTML = todayTasksCard(); bindTasks($("#v-today")); tickClock(); } }
+  if(!$("#sheet").hidden && $("#sheetBody").dataset.tk) openTask($("#sheetBody").dataset.tk, true);
+}
+function bindTasks(root){
+  root.querySelectorAll("[data-tk-seg]").forEach(b=>b.onclick = ()=>{ taskSeg = b.dataset.tkSeg; try{ sessionStorage.setItem("ohc-taskseg", taskSeg); }catch(e){} renderTasks(); });
+  root.querySelectorAll("[data-tk-done]").forEach(b=>b.onclick = ()=>{ const now = Date.now(); if(now - tkTapAt < 900) return; tkTapAt = now; const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkDone); if(t) setDone(t, !t.done); });
+  root.querySelectorAll("[data-tk-open]").forEach(b=>b.onclick = ()=>openTask(b.dataset.tkOpen));
+  root.querySelectorAll("[data-tk-pin]").forEach(b=>b.onclick = ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkPin); if(t) pinToday(t); });
+  root.querySelectorAll("[data-tk-stop]").forEach(b=>b.onclick = ()=>stopTimer());
+  root.querySelectorAll("[data-tk-new]").forEach(b=>b.onclick = ()=>openTask(null, false, {area:b.dataset.tkNew}));
+  root.querySelectorAll("[data-goto-tasks]").forEach(b=>b.onclick = ()=>{ taskSeg = "today"; switchTab("tasks"); });
+  root.querySelectorAll("details.tk-area").forEach(d=>d.addEventListener("toggle", ()=>{ d.open ? tkOpenAreas.add(d.dataset.tkArea) : tkOpenAreas.delete(d.dataset.tkArea); try{ sessionStorage.setItem("ohc-tkareas", JSON.stringify([...tkOpenAreas])); }catch(e){} }));
+  const qa = root.querySelector("#tkQuickAdd"), qi = root.querySelector("#tkQuick");
+  const add = async ()=>{ const title = qi.value.trim(); if(!title) return; const [area, sub] = (root.querySelector("#tkQuickArea").value||"|").split("|");
+    tasksDoc.tasks.push(newTask({title, area:area||null, sub:sub||null})); qi.value = ""; renderTasks(); await saveTasks(); };
+  if(qa) qa.onclick = add; if(qi) qi.onkeydown = e=>{ if(e.key==="Enter") add(); };
+  root.querySelectorAll("[data-tk-keep]").forEach(b=>b.onclick = async ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkKeep); if(!t) return; const [a,s] = (root.querySelector(`[data-tk-revarea="${t.id}"]`).value||"|").split("|"); t.area = a||null; t.sub = s||null; t.review = false; renderTasks(); await saveTasks(); });
+  root.querySelectorAll("[data-tk-revdone]").forEach(b=>b.onclick = async ()=>{ const t = tasksDoc.tasks.find(x=>x.id===b.dataset.tkRevdone); if(!t) return; t.review = false; t.done = true; t.doneAt = null; renderTasks(); await saveTasks(); });
+  root.querySelectorAll("[data-tk-del]").forEach(b=>b.onclick = async ()=>{ if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent = L("Tap again","Nochmal tippen"); return; } tasksDoc.tasks = tasksDoc.tasks.filter(x=>x.id!==b.dataset.tkDel); renderTasks(); await saveTasks(); });
+}
+
 /* ----- task sheet ----- */
 function openTask(id, refresh, preset){
   const found = id ? tasksDoc.tasks.find(x=>x.id===id) : null;
@@ -85,14 +108,14 @@ function switchTab(t){
 }
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click", ()=>switchTab(b.dataset.tab)));
 $("#gearBtn").addEventListener("click", ()=>switchTab(tab==="setup" ? "today" : "setup"));
-document.addEventListener("visibilitychange", async ()=>{ if(document.hidden || !db) return; try{ await loadDocs(); planCache.clear(); render(); }catch(e){} });
+document.addEventListener("visibilitychange", async ()=>{ if(document.hidden || !db) return; try{ await loadDocs(); if(autoTop3()) saveTasks(); planCache.clear(); render(); }catch(e){} });
 (async function boot(){
   try{ const t = sessionStorage.getItem("ohc-tab"); if(t) tab = t; }catch(e){}
   if(window.API && !API.configured()) tab = "setup";
   switchTab(tab);
   if(window.API && API.configured()){ [db, mcp, sample] = [API.db, API.mcp, API.sample]; }
   else { calState = {status:"off", msg:"Connect the backend in Setup (gear icon)."}; driveState = {status:"off", msg:"Connect the backend in Setup (gear icon)."}; }
-  await loadDocs(); planCache.clear(); if(reconcileTicks()) saveDoc("log", logData);
+  await loadDocs(); if(autoTop3()) saveTasks(); planCache.clear(); if(reconcileTicks()) saveDoc("log", logData);
   startCalendar();
   switchTab(tab);
   writeSchedule(false);

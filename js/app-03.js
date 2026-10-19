@@ -9,7 +9,7 @@ function renderWeek(){
   if(weekOffset>1) html += `<div class="banner">Calendar events load for this and next week only. Later weeks use your template.</div>`;
   for(const d of P.days){
     const k = dateKey(d.date), def = d.session?.def, dn = def ? doneCount(k, def) : 0;
-    html += `<div class="wday ${k===today?"today":""}">
+    html += `<div class="wday ${k===today?"today":""}" data-wday="${k}" style="cursor:pointer">
       ${ring(def? dn/def.total : 0, def?(isDone(k,def)?"var(--rec-g)":"var(--load)"):"var(--track)", 52, 6, `<span style="font-size:13px">${SHORT[d.date.getDay()]}</span>`, "", 13)}
       <div style="display:grid;gap:4px;min-width:0"><div class="spread" style="flex-wrap:nowrap;align-items:flex-start"><span style="font-weight:700;display:inline-flex;align-items:center;gap:8px;min-width:0" class="${def?`ty-${typeKey(def.type)}`:""}">${def?tbadge(def.type,"sm"):""}<span class="tname" style="min-width:0">${def?esc(def.name):d.conflict?"No slot":d.date.getDay()===6?"Day off":"Rest"}${def?`<span class="muted small" style="white-space:nowrap"> · ${fmt(d.session.start)}</span>`:""}</span></span><span class="small muted mono">${d.date.getDate()}.${d.date.getMonth()+1}.</span></div>
       <div class="row" style="gap:6px">${def&&isDone(k,def)?`<span class="chip g">Done</span>`:""}${d.session?.moved?`<span class="chip">moved from ${d.session.fromDay}</span>`:""}${d.bed.late?`<span class="chip sleep">bed ${fmt(d.bed.bed)}</span>`:""}${d.wake.early?`<span class="chip sleep">wake ${fmt(d.wake.wake)}</span>`:""}${d.afterLate&&def?.hard?`<span class="chip y">after late night</span>`:""}${(()=>{ const x = k<today? strainFor(k) : null; return x!=null? `<span class="chip load">strain ${x.toFixed(1)}</span>` : ""; })()}${workoutsFor(k).map(w=>`<span class="chip watch">⌚ ${esc(wType(w))} ${w.min} min${w.km?` · ${w.km.toFixed(1)} km`:""}</span>`).join("")}</div></div>
@@ -339,8 +339,8 @@ function vo2Estimate(){
   const race = Math.max(vdotD(secs(latest("t5k")),5000), latest("t10k")? vdotD(secs(latest("t10k")),10000) : 0);
   const parts = [];
   if(runs.length>=3) parts.push({k:"hr", t:"Pace vs heart rate", v:med(runs), w:.50, note:`median of ${runs.length} runs, last 4 months, resting HR ${Math.round(hrRest)}`});
-  if(watch) parts.push({k:"watch", t:"Watch (Zepp)", v:watch, w:.35, note:"wrist estimates are often a few points high"});
-  if(race) parts.push({k:"race", t:"Race times", v:race, w:.15, note:"a floor: your recorded races were not all out"});
+  if(watch) parts.push({k:"watch", t:"Watch (Zepp)", v:watch, w:.40, note:"wrist estimates are often a few points high"});
+  if(race) parts.push({k:"race", t:"Race times", v:race, w:.10, note:"a floor: your recorded races were not all out"});
   if(!parts.length) return null;
   const W = parts.reduce((n,p)=>n+p.w,0), val = parts.reduce((n,p)=>n+p.v*p.w,0)/W;
   const spread = parts.length>1 ? Math.max(...parts.map(p=>p.v)) - Math.min(...parts.map(p=>p.v)) : 6;

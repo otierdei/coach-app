@@ -89,6 +89,8 @@ document.addEventListener("click", e=>{
   const cb = e.target.closest?.("[data-cb]"); if(cb){ openCalItem(cb.dataset.cb); return; }
   const db = e.target.closest?.("[data-daycal]"); if(db){ openDaySheet(db.dataset.daycal); return; }
   const bk = e.target.closest?.("[data-dayback]"); if(bk){ openDaySheet(bk.dataset.dayback); return; }
+  // whole day card on the Week tab opens the day calendar (workout details and checkboxes keep their own taps)
+  const wd = e.target.closest?.("[data-wday]"); if(wd && !e.target.closest("details,button,a,input,label,select,textarea")){ openDaySheet(wd.dataset.wday); return; }
   if(e.target.closest?.("[data-gotrain]")){ closeSheet(); document.querySelector("#v-today .tcard, #v-today .card:nth-of-type(3)")?.scrollIntoView({behavior:"smooth", block:"start"}); }
 });
 /* ================= movement breaks: middle of the longest deep work block, Mon Wed Thu Fri ================= */

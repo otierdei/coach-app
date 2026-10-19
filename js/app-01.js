@@ -217,6 +217,8 @@ function calEventsForDay(date){
   for(const list of Object.values(calEvents)){
     for(const ev of list){
       if(ev.status==="cancelled" || !ev.start || !ev.start.dateTime) continue;
+      // training blocks the app itself exported to the calendar are not outside commitments
+      if(/Quelle: Coach App/i.test(ev.description||"")) continue;
       const s = new Date(ev.start.dateTime), e = new Date(ev.end?.dateTime || ev.start.dateTime);
       const sm = (s - k0)/6e4, em = (e - k0)/6e4;
       if(em <= 0 || sm >= 1440) continue;
