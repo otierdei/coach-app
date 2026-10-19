@@ -242,7 +242,7 @@
     const p = Object.keys(pending).length;
     return `<div class="card" id="apiCard"><div class="spread"><h3>Backend</h3><span class="chip ${st[0]}"><span class="dot"></span>${e(st[1])}</span></div>
       <p class="small muted">Your data lives in the Google Drive folder "Coach Data", read and written by your own Apps Script web app. URL and key are stored only on this device.</p>
-      <label class="f" for="apiUrl">Web app URL<input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" value="${e(cfg?.url||"")}"></label>
+      <label class="f" for="apiUrl">Web app URL or connect link<input id="apiUrl" placeholder="Paste the connect link or the /exec URL" value="${e(cfg?.url||"")}"></label>
       <label class="f" for="apiKey">Secret key<input id="apiKey" type="password" autocomplete="off" value="${e(cfg?.key||"")}"></label>
       <div class="row"><button class="primary" id="apiSave">Connect</button><button class="ghost" id="apiLink" ${configured()?"":"disabled"}>Copy link for iPhone</button><span id="apiMsg" class="small muted">${p?`${p} change(s) waiting to sync. `:""}${e(lastErr && online===false ? lastErr : "")}</span></div></div>` + pushHtml(e);
   }
@@ -250,7 +250,10 @@
     bindPush();
     const s = document.getElementById("apiSave"); if(!s) return;
     s.onclick = async ()=>{
-      const url = document.getElementById("apiUrl").value.trim(), key = document.getElementById("apiKey").value.trim();
+      let url = document.getElementById("apiUrl").value.trim(), key = document.getElementById("apiKey").value.trim();
+      // the whole "Copy link for iPhone" link can be pasted into the URL field (Home Screen apps have their own storage, so opening the link in Safari does not reach them)
+      const cm = url.match(/connect=([A-Za-z0-9_\-]+)/);
+      if(cm){ try{ const j = JSON.parse(atob(cm[1].replace(/-/g,"+").replace(/_/g,"/"))); if(j.u && j.k){ url = j.u; key = j.k; } }catch(err){} }
       const msg = document.getElementById("apiMsg");
       cfg = {url, key}; LS.set("cfg", cfg); msg.textContent = "Checking…";
       try{ const r = await call("ping"); msg.textContent = `Connected as ${r.user||"you"}. ${r.docs?.length||0} docs found. Reloading…`; setTimeout(()=>location.reload(), 900); }
