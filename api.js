@@ -63,27 +63,36 @@
     return prefetch;
   }
   const chains = {};             // serialize writes per doc
+  // docs read from the server in this page session. A doc that was not read from the server is never written
+  // as a whole: the write goes with an impossible base version, so the server answers with its current copy first.
+  // (20.10.2026: a phone that had been offline kept a small local copy and overwrote the full log on the server.)
+  const loaded = new Set(), mergeEpoch = {};
   async function writeDoc(name, data){
-    let attempt = 0;
+    let attempt = 0, merged = false;
     while(true){
-      const base = versions[name] ?? 0;
+      const base = loaded.has(name) ? (versions[name] ?? 0) : -1;
       const r = await call("write", {doc:name, data, baseVersion: base});
-      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); delete pending[name]; LS.set("pending", pending); return r; }
+      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); delete pending[name]; LS.set("pending", pending); loaded.add(name);
+        // the app must continue with what is now on the server, not with its older copy
+        if(merged){ mergeEpoch[name] = (mergeEpoch[name]||0) + 1; LS.set("cache:"+name, data); try{ window.dispatchEvent(new CustomEvent("coach:merged", {detail:{name, data: JSON.parse(JSON.stringify(data))}})); }catch(e){} }
+        return r; }
       if(r.conflict && attempt < 2){
         attempt++;
         versions[name] = r.current?.version ?? 0;
-        if(MERGE_DOCS.has(name) && r.current) data = mergeDeep(r.current.data || {}, data);
-        continue;
+        if(MERGE_DOCS.has(name) && r.current){ data = mergeDeep(r.current.data || {}, data); merged = true; loaded.add(name); continue; }
+        throw Object.assign(new Error("Version conflict on "+name+": reload to see the newest data"), {code:"conflict"});
       }
       throw Object.assign(new Error("Version conflict on "+name), {code:"conflict"});
     }
   }
   function queueWrite(name, data){
-    const snapshot = JSON.parse(JSON.stringify(data));
+    let snapshot = JSON.parse(JSON.stringify(data)); const epoch = mergeEpoch[name]||0;
     pending[name] = snapshot; LS.set("pending", pending);
     const prev = chains[name] || Promise.resolve();
     const p = prev.catch(()=>{}).then(async ()=>{
       if(pending[name] !== snapshot) return;        // a newer write superseded this one
+      // taken from the old copy before a merge with the server: lay it over the merged copy instead of replacing it
+      if(MERGE_DOCS.has(name) && (mergeEpoch[name]||0) > epoch){ snapshot = mergeDeep(LS.get("cache:"+name) || {}, snapshot); pending[name] = snapshot; LS.set("pending", pending); }
       return writeDoc(name, snapshot);
     });
     chains[name] = p;
@@ -99,11 +108,13 @@
       const name = String(path).replace(/^app\//,"");
       return {
         async get(){
-          if(pending[name]) return {exists:true, data:()=>pending[name]};   // never show older server data over an unsaved local change
           let rec = null;
           try{ const all = await readAllOnce(); rec = all[name] || null; }
-          catch(e){ const c = LS.get("cache:"+name); return {exists: !!c, data: ()=>c}; }
-          if(rec && (versions[name]==null || rec.version >= versions[name])){ versions[name] = rec.version; LS.set("versions", versions); LS.set("cache:"+name, rec.data); }
+          catch(e){ const c = pending[name] || LS.get("cache:"+name); return {exists: !!c, data: ()=>c}; }
+          loaded.add(name);
+          if(rec){ versions[name] = rec.version; LS.set("versions", versions); LS.set("cache:"+name, rec.data); }
+          // an unsaved local change is shown on top of the server copy, never instead of it
+          if(pending[name]){ const p = MERGE_DOCS.has(name) && rec ? mergeDeep(rec.data || {}, pending[name]) : pending[name]; return {exists:true, data:()=>p}; }
           return {exists: !!rec, data: ()=>rec ? rec.data : undefined};
         },
         async set(obj){ LS.set("cache:"+name, obj); return queueWrite(name, obj); }

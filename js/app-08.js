@@ -99,6 +99,10 @@ function injectTodayTasks(){
   if(cards.length) cards[0].after(c); else v.appendChild(c);
   bindTasks(v); tickClock();
 }
+// api.js merged a write with a newer server copy: continue with the merged doc (never write the old copy again)
+window.addEventListener("coach:merged", e=>{ const {name, data} = e.detail||{};
+  if(name==="log") logData = {days:{}, ...data}; else if(name==="health") health = {days:{}, workouts:[], sources:[], driveSeen:{}, ...data}; else return;
+  try{ bumpLog(); }catch(err){} planCache.clear(); render(); });
 function switchTab(t){
   tab = t; try{ sessionStorage.setItem("ohc-tab", t); }catch(e){}
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===t)));
