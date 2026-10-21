@@ -260,7 +260,23 @@ function fastSkip(date){
 function isFast(date){ return isFastDow(date) && !fastSkip(date); }
 function weekIndex(date){ return Math.floor((mondayOf(date) - mondayOf(fromKey(profile.blockStart))) / (7*864e5)) + 1; }
 const DELOAD = w => w===4 || w===8;
+// Strength A+B in one session (Oti, 21.10.2026): when a strength day is lost, the next one combines both.
+// Main lifts of A (pull ups) and B (push variation) keep their sets and progression, everything else 2 sets
+// (pike 3), no jumps, pistols, Nordics, chin ups, curls or core finishers, so it stays about 65 min.
+function comboDef(w){
+  const A = sessionDef("strengthA", w), B = sessionDef("strengthB", w);
+  const pick = (D, re, cap, extra) => { const b = D.blocks.find(x=>re.test(x.n)); if(!b) return null; const c = structuredClone(b);
+    if(cap && c.s > cap){ c.d = c.d.replace(new RegExp("^"+c.s+" × "), cap+" × "); c.s = cap; } if(extra) c.d += extra; return c; };
+  const blocks = [
+    pick(A, /^Pull ups/), B.blocks.find(x=>x.prog && /^push/.test(x.prog.id)) && structuredClone(B.blocks.find(x=>x.prog && /^push/.test(x.prog.id))),
+    pick(A, /^Bulgarian/, 2, " (legs still sore: keep 3 reps in reserve, skip if stairs still hurt)"), pick(B, /^Pike/, 3), pick(B, /^Dips/, 2),
+    pick(A, /^Copenhagen/, 2), pick(A, /^Hammer/, 2), pick(B, /^DB overhead/, 2), pick(B, /^False grip/, 2)].filter(Boolean);
+  const d = {name:"Strength A+B", sub:"Pull + push + light legs, combined", hard:true, min:65, type:"strength", blocks};
+  d.sessionKey = "strengthAB"; if(A.deload) d.deload = true;
+  return finishDef(d);
+}
 function sessionDef(key, w){
+  if(key==="strengthAB") return comboDef(w);
   const P = paces(), wb = clamp(w,1,12), dl = DELOAD(wb), cyc = (wb-1)%4, phase = wb<=3?0:wb<=7?1:2;
   const E = `${pace(P.E2)} to ${pace(P.E1)}, HR under 150`;
   let d;

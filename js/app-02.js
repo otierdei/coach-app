@@ -99,6 +99,7 @@ function loadsOf(def){
   if(!def) return {};
   if(def.sessionKey==="strengthA") return {pull:3, legs:3};
   if(def.sessionKey==="strengthB") return {push:3, pull:1};
+  if(def.sessionKey==="strengthAB") return {pull:3, push:3, legs:1.5};
   if(def.type==="sport") return {legs:3};
   if(def.type==="run") return {legs: def.hard ? 3 : 1.5};
   return {};
@@ -176,7 +177,7 @@ function ageInputs(days){
   const weeks = Math.max(1, days/7);
   const z2 = wos.reduce((n,w)=>n + (w.zones? w.min*(w.zones[1]+w.zones[2]+w.zones[3]+w.zones[4])/100 : (w.hrAvg && w.hrAvg>=0.6*profile.body.maxHr ? w.min : 0)), 0)/weeks;
   const vig = wos.reduce((n,w)=>n + (w.zones? w.min*(w.zones[3]+w.zones[4])/100 : 0), 0)/weeks;
-  const strengthDays = new Set([...keys.filter(k=>{ const d = logData.days[k]?.done||{}; return d.strengthA || d.strengthB; }), ...wos.filter(w=>/strength/i.test(wType(w))).map(w=>w.date)]).size;
+  const strengthDays = new Set([...keys.filter(k=>{ const d = logData.days[k]?.done||{}; return d.strengthA || d.strengthB || d.strengthAB; }), ...wos.filter(w=>/strength/i.test(wType(w))).map(w=>w.date)]).size;
   return {n:H.length, sleep:mean(vals("sleepMin")), sleepSd: wakeSd!=null && onsetSd!=null ? (wakeSd+onsetSd)/2 : (wakeSd ?? onsetSd), rhr:mean(vals("rhr")), steps:mean(vals("steps")), z2, vig, strength:strengthDays/weeks, vo2: vo2Estimate()?.value ?? vdot(secs(latest("t5k")))};
 }
 function ageContrib(I){
@@ -387,7 +388,7 @@ function renderToday(){
   else html += `<p class="small muted">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>`;
   const ov = (profile.overrides||{})[k];
   html += `<details class="chg"><summary class="small">Change today's training</summary>
-    <div class="grid2" style="margin-top:10px"><label class="f" for="ovKey">Training<select id="ovKey">${[["","As planned"],["rest","Rest"],["easyRun","Easy run"],["long","Long run"],["intervals","Intervals"],["strengthA","Strength A"],["strengthB","Strength B"]].map(([v,t])=>`<option value="${v}" ${(ov?.key||"")===v?"selected":""}>${t}</option>`).join("")}</select></label>
+    <div class="grid2" style="margin-top:10px"><label class="f" for="ovKey">Training<select id="ovKey">${[["","As planned"],["rest","Rest"],["easyRun","Easy run"],["long","Long run"],["intervals","Intervals"],["strengthA","Strength A"],["strengthB","Strength B"],["strengthAB","Strength A+B"]].map(([v,t])=>`<option value="${v}" ${(ov?.key||"")===v?"selected":""}>${t}</option>`).join("")}</select></label>
     <label class="f" for="ovStart">Start<input id="ovStart" type="time" value="${ov?.start || (s? fmt(s.start) : "17:00")}"></label>
     <label class="f" for="ovMin">Minutes (easy run)<input id="ovMin" type="number" min="15" max="120" step="5" value="${ov?.min||30}"></label></div>
     <button id="btnOv" style="margin-top:10px">Save change</button></details></div>`;
