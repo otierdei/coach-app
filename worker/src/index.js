@@ -94,6 +94,19 @@ function dayTable() {
     out.push(`${tag} (${p.weekday}) = ${p.year}-${p.month}-${p.day}`); }
   return out.join("\n");
 }
+// "nächsten Mittwoch", "am Freitag": the next such day after today (today itself only with "heute")
+function weekdayHints(text) {
+  const names = ["sonntag", "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag"];
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" });
+  const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const p0 = Object.fromEntries(f.formatToParts(new Date()).map(x => [x.type, x.value])), today = wd[p0.weekday];
+  const out = [], t = text.toLowerCase();
+  names.forEach((n, i) => { const m = t.match(new RegExp("((?:über)?nächste[nm]?|kommende[nm]?|diese[nm]?|am)?\\s*" + n)); if (!m) return;
+    let add = (i - today + 7) % 7 || 7; if (/über/.test(m[1] || "")) add += 7;
+    const d = new Date(Date.now() + add * 864e5), p = Object.fromEntries(f.formatToParts(d).map(x => [x.type, x.value]));
+    out.push(`"${m[0].trim()}" = ${p.year}-${p.month}-${p.day}`); });
+  return out.length ? "\nIn this sentence: " + out.join("; ") + ". Use exactly these dates." : "";
+}
 async function doAssist(env, body) {
   if (!env.AI && !env.ANTHROPIC_API_KEY) return { ok: false, error: "assistant not set up", code: "no_api_key" };
   const text = String(body.text || "").trim().slice(0, 600);
@@ -107,7 +120,7 @@ async function doAssist(env, body) {
     "Use the date table for relative dates (morgen, übermorgen, nächsten Freitag). For update or delete use only an id from the event list and never a recurring event. " +
     "title is the event name only (Zahnarzt, Bandprobe), never empty for create; location only if he names a place. start and end as local time YYYY-MM-DDTHH:MM without offset. " +
     "reply: one short German sentence. If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Answer only with JSON.";
-  const user = "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text;
+  const user = "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text + weekdayHints(text);
   let out = null, err = null;
   if (env.AI) {
     try {
@@ -129,7 +142,9 @@ async function doAssist(env, body) {
   if (!out) { await log(env, "assist", "error", 0, 0, 0, err || "no answer"); return { ok: false, error: "assistant error" }; }
   if (!["create", "update", "delete", "none"].includes(out.action)) out.action = "none";
   // only ids that were really in the list
-  if ((out.action === "update" || out.action === "delete") && !events.some(e => e.id === out.id && !e.recurring)) { out.action = "none"; out.reply = out.reply || "Welchen Termin meinst du?"; }
+  if ((out.action === "update" || out.action === "delete") && !events.some(e => e.id === out.id && !e.recurring)) {
+    const rec = events.some(e => e.id === out.id && e.recurring);
+    out.action = "none"; out.reply = rec ? "Das ist ein Serientermin. Den änderst du bitte direkt in Google Kalender." : "Welchen Termin meinst du genau?"; }
   await log(env, "assist", out.action, 0, 0, 0, text.slice(0, 200));
   const clean = v => { const m = String(v || "").match(/^(\d{4}-\d{2}-\d{2})(T\d{2}:\d{2})?/); return m ? m[1] + (m[2] || "") : ""; };
   const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: clean(out.start), end: clean(out.end), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
