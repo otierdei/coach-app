@@ -1,0 +1,247 @@
+/* ===== Theme "Warm" (23.10.2026): MCI principles, earthy colours, light and dark follow the device =====
+   Loaded after styles.css. Only overrides: colours, type, shapes, navigation. Layout logic stays in styles.css. */
+:root{
+  color-scheme:light;
+  --bg:#F4EFE7; --card:#FFFDF9; --card-2:#ECE5DA; --card-3:#E2D9CB; --line:#E5DDD0;
+  --ink:#1C1A17; --ink-2:#3F3932; --muted:#6B6257;
+  --accent:#B9512A; --accent-ink:#A4461F; --on-accent:#FFFFFF; --sage:#5F7A4E;
+  --hero:#EFDCCD; --hero-ink:#1C1A17; --hero-muted:#6B5546; --hero-accent:#A4461F; --hero-line:rgba(28,26,23,.1);
+  --strain:#A4461F; --sleep:#6E6455; --steps:#5F7A4E; --protein:#8C6A2E; --focus:#5F7A4E; --meal:#8C6A2E;
+  --rec-g:#5F7A4E; --rec-y:#9A7414; --rec-r:#B23A2E;
+  --g-soft:rgba(95,122,78,.13); --y-soft:rgba(154,116,20,.13); --r-soft:rgba(178,58,46,.11);
+  --g-ink:#435A35; --y-ink:#715409; --r-ink:#8E2A20;
+  --run:#6E6455; --lift:#A4461F; --sport:#5F7A4E;
+  --s-deep:#1C1A17; --s-rem:#8A7F70; --s-light:#D8CFC1; --s-awake:#B9512A;
+  --work:#B9512A; --work-on:#FFFFFF; --work-soft:rgba(185,81,42,.10); --work-ink:#A4461F;
+  --track:rgba(28,26,23,.08); --shadow:none;
+  --glass:rgba(255,253,249,.66); --glass-line:rgba(28,26,23,.08); --glass-on:rgba(28,26,23,.07); --glass-ink:#4A433B;
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 8px 30px rgba(60,40,20,.12);
+  --display:"Montserrat","Arial Black",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Inter",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0F0E0C; --card:#1B1916; --card-2:#28251F; --card-3:#332F28; --line:#2C2925;
+  --ink:#F3EEE6; --ink-2:#D6CEC2; --muted:#ADA394;
+  --accent:#D9643A; --accent-ink:#E8875F; --on-accent:#0F0E0C; --sage:#A9BD94;
+  --hero:#2B1C13; --hero-ink:#F3EEE6; --hero-muted:#C9B7A6; --hero-accent:#E8875F; --hero-line:rgba(243,238,230,.1);
+  --strain:#E8875F; --sleep:#C4B8A6; --steps:#A9BD94; --protein:#D9B48A; --focus:#A9BD94; --meal:#D9B48A;
+  --rec-g:#A9BD94; --rec-y:#D9B05A; --rec-r:#E0705E;
+  --g-soft:rgba(169,189,148,.13); --y-soft:rgba(217,176,90,.13); --r-soft:rgba(224,112,94,.14);
+  --g-ink:#C6D6B5; --y-ink:#EBCB8B; --r-ink:#F0A597;
+  --run:#CDBFA8; --lift:#E8875F; --sport:#A9BD94;
+  --s-deep:#F3EEE6; --s-rem:#C4B8A6; --s-light:#4E483F; --s-awake:#D9643A;
+  --work:#D9643A; --work-on:#0F0E0C; --work-soft:rgba(217,100,58,.13); --work-ink:#E8875F;
+  --track:rgba(243,238,230,.09);
+  --glass:rgba(40,36,31,.58); --glass-line:rgba(243,238,230,.12); --glass-on:rgba(243,238,230,.14); --glass-ink:#DCD4C8;
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F0E0C; --card:#1B1916; --card-2:#28251F; --card-3:#332F28; --line:#2C2925;
+  --ink:#F3EEE6; --ink-2:#D6CEC2; --muted:#ADA394;
+  --accent:#D9643A; --accent-ink:#E8875F; --on-accent:#0F0E0C; --sage:#A9BD94;
+  --hero:#2B1C13; --hero-ink:#F3EEE6; --hero-muted:#C9B7A6; --hero-accent:#E8875F; --hero-line:rgba(243,238,230,.1);
+  --strain:#E8875F; --sleep:#C4B8A6; --steps:#A9BD94; --protein:#D9B48A; --focus:#A9BD94; --meal:#D9B48A;
+  --rec-g:#A9BD94; --rec-y:#D9B05A; --rec-r:#E0705E;
+  --g-soft:rgba(169,189,148,.13); --y-soft:rgba(217,176,90,.13); --r-soft:rgba(224,112,94,.14);
+  --g-ink:#C6D6B5; --y-ink:#EBCB8B; --r-ink:#F0A597;
+  --run:#CDBFA8; --lift:#E8875F; --sport:#A9BD94;
+  --s-deep:#F3EEE6; --s-rem:#C4B8A6; --s-light:#4E483F; --s-awake:#D9643A;
+  --work:#D9643A; --work-on:#0F0E0C; --work-soft:rgba(217,100,58,.13); --work-ink:#E8875F;
+  --track:rgba(243,238,230,.09);
+  --glass:rgba(40,36,31,.58); --glass-line:rgba(243,238,230,.12); --glass-on:rgba(243,238,230,.14); --glass-ink:#DCD4C8;
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 30px rgba(0,0,0,.35);
+}
+
+/* ---- type ---- */
+body{font-family:var(--body);font-size:15px;letter-spacing:-.005em}
+.brand{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;color:var(--muted)}
+h2{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.05;letter-spacing:.01em;text-transform:uppercase}
+.card h2{font-size:26px}
+.card>h3,.card>.spread h3,.card>.spread>div>h3,details.card>summary{font-family:var(--body);font-size:17px;font-weight:700;letter-spacing:-.01em;text-transform:none}
+.eyebrow{font-size:11px;letter-spacing:.12em;font-weight:700}
+.mono{font-family:var(--body);font-variant-numeric:tabular-nums}
+.ring .v,.stat b,.kv b,.wday .dn{font-family:var(--display);font-weight:800;letter-spacing:0}
+.ring .l{letter-spacing:.1em}
+
+/* ---- shapes ---- */
+.card,details.card{border-radius:22px;box-shadow:none}
+.chip{border-radius:999px;font-weight:600;background:var(--card);color:var(--ink)}
+.card .chip{background:var(--card-2)}
+button{border-radius:999px}
+button.primary{background:var(--ink);color:var(--bg)}
+button.ghost{border-color:var(--line)}
+input,select,textarea{border-radius:14px}
+.banner{border-radius:16px}
+.stat{border-radius:16px}
+.lrow,.nrow{border-radius:16px}
+.why{border-radius:16px}
+.tcard{border-left:0}
+.tb{border-radius:999px}
+.sheet{background:rgba(15,14,12,.5)}
+.sheet-card{border-radius:28px 28px 0 0}
+#v-tasks .tk-imp{background:var(--card)}
+
+/* ---- bottom bar: floating glass like Raum Hub (iPhone) ---- */
+body{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+nav.tabs{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:6px;border-radius:34px;border:.5px solid var(--glass-line);
+  background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:var(--glass-shadow);max-width:560px;margin:0 auto}
+nav.tabs .in{gap:0}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;min-height:52px;border-radius:28px;font:600 10.5px var(--body);color:var(--glass-ink);background:transparent}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-selected=true]{background:var(--glass-on);color:var(--ink)}
+body.on-tasks nav.tabs button[aria-selected=true]{color:var(--ink)}
+
+/* ---- Fitness: sub tabs over Progress and Sleep ---- */
+.fseg{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-top:-2px}
+.fseg button{background:none;border-radius:0;padding:0 0 10px;min-height:36px;color:var(--muted);font-weight:600;font-size:15px}
+.fseg button[aria-pressed=true]{color:var(--ink);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
+
+/* ---- Today: week strip, training hero, body tiles ---- */
+.wkstrip{background:var(--card);border-radius:22px;padding:12px 10px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
+.wkstrip .wd{font-size:11px;font-weight:500;color:var(--muted)}
+.wkstrip .wd.now{color:var(--ink);font-weight:700}
+.wkstrip .dy{display:grid;justify-items:center;gap:4px;background:none;padding:0;min-height:0;border-radius:0}
+.wkstrip .dy{min-height:44px}
+.wkstrip .dy b{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;font:600 14px var(--body);background:transparent;color:var(--ink)}
+.wkstrip .dy.past b{background:var(--card-2);color:var(--muted)}
+.wkstrip .dy.now b{box-shadow:inset 0 0 0 2px var(--accent);font-weight:700}
+.wkstrip .dy i{width:5px;height:5px;border-radius:9px;background:transparent}
+.wkstrip .dy.tr i{background:var(--muted)}
+.wkstrip .dy.now.tr i{background:var(--accent)}
+.wkstrip .dy.done b{background:color-mix(in srgb,var(--sage) 26%,transparent);color:var(--ink)}
+.wkstrip .dy.done i{background:var(--sage)}
+
+.thero{background:var(--hero);color:var(--hero-ink);gap:14px}
+.thero .eyebrow{color:var(--hero-accent)}
+.thero .muted,.thero .small{color:var(--hero-muted)}
+.thero h2{font-size:30px}
+.thero .tnums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.thero .tnums b{display:block;font:800 20px var(--display)}
+.thero .tnums span{font-size:12px;color:var(--hero-muted)}
+.thero .banner{background:color-mix(in srgb,var(--hero-ink) 8%,transparent);color:var(--hero-ink)}
+.bigbtn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:999px;background:var(--hero-ink);color:var(--hero);font:700 15px var(--body);width:100%}
+.bigbtn svg{width:14px;height:14px}
+
+.btiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.btile{background:var(--card);border-radius:22px;padding:14px;display:grid;gap:8px;align-content:start;text-align:left;color:var(--ink);font-weight:400;min-height:0}
+button.btile{border-radius:22px}
+.btile .bt{font-size:13px;font-weight:600}
+.btile .bv{font:800 26px/1.05 var(--display)}
+.btile .bv small{font:600 14px var(--body);color:var(--muted)}
+.btile .bs{font-size:12px;color:var(--muted)}
+.btile[aria-expanded=true]{box-shadow:inset 0 0 0 2px var(--accent)}
+.sec{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:4px 4px 0}
+
+/* ---- training view (full screen, like MCI) ---- */
+#v-train{position:fixed;inset:0;z-index:15;background:var(--bg);overflow:auto;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(110px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;align-content:start}
+#v-train .tin{max-width:560px;width:100%;margin:0 auto;display:grid;gap:12px}
+.trhead{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px}
+.trhead h2{text-align:center;font-size:18px}
+.rbtn{width:44px;height:44px;min-height:44px;padding:0;border-radius:999px;background:var(--card);color:var(--ink);display:grid;place-items:center}
+.trseg{display:flex;gap:4px}
+.trseg i{flex:1;height:4px;border-radius:4px;background:var(--card-3)}
+.trseg i.d{background:var(--ink)} .trseg i.n{background:var(--accent)}
+.trmeta{display:flex;justify-content:space-between;align-items:baseline}
+.trmeta span{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--muted);margin-right:8px}
+.trmeta b{font:800 22px var(--display);font-variant-numeric:tabular-nums}
+.trfoot{position:fixed;left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr;z-index:16}
+.trfoot button{height:52px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-weight:700}
+@media (max-width: 999px){ body.training nav.tabs{display:none} body.training{overflow:hidden} }
+
+/* ---- Life: no coloured left borders, quieter accents ---- */
+.ptw{--pw-font:var(--body);
+  --pw-bg:var(--bg); --pw-card:var(--card); --pw-ink:var(--ink); --pw-ink2:var(--ink-2); --pw-muted:var(--muted); --pw-line:var(--line);
+  --pw-prayer:#8A8F86; --pw-fast:#7A6E5E; --pw-sol:var(--sage); --pw-comm:var(--accent); --pw-serv:#9C8F7C; --pw-other:#B08A4A;
+  --pw-goal:var(--hero); --pw-goal-ink:var(--hero-ink); --pw-pill:var(--ink); --pw-pill-ink:var(--bg); --pw-done:var(--sage)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ptw{
+  --pw-bg:var(--bg); --pw-card:var(--card); --pw-ink:var(--ink); --pw-ink2:var(--ink-2); --pw-muted:var(--muted); --pw-line:var(--line);
+  --pw-prayer:#A3A89E; --pw-fast:#B3A48E; --pw-sol:var(--sage); --pw-comm:var(--accent-ink); --pw-serv:#C4B8A6; --pw-other:#D9B48A;
+  --pw-goal:var(--hero); --pw-goal-ink:var(--hero-ink); --pw-pill:var(--ink); --pw-pill-ink:var(--bg); --pw-done:var(--sage)}}
+:root[data-theme="dark"] .ptw{
+  --pw-bg:var(--bg); --pw-card:var(--card); --pw-ink:var(--ink); --pw-ink2:var(--ink-2); --pw-muted:var(--muted); --pw-line:var(--line);
+  --pw-prayer:#A3A89E; --pw-fast:#B3A48E; --pw-sol:var(--sage); --pw-comm:var(--accent-ink); --pw-serv:#C4B8A6; --pw-other:#D9B48A;
+  --pw-goal:var(--hero); --pw-goal-ink:var(--hero-ink); --pw-pill:var(--ink); --pw-pill-ink:var(--bg); --pw-done:var(--sage)}
+.ptw{margin-inline:0;padding:0;background:transparent}
+.ptw h2{font-family:var(--display);font-weight:800;font-size:24px;text-transform:uppercase;letter-spacing:.01em}
+.ptw h3{font-family:var(--body);font-weight:700;font-size:17px}
+.pw-goal{text-align:left;border-radius:22px}
+.pw-goal .g{font:800 21px/1.2 var(--display);text-transform:none}
+.pw-mini,.pw-card{box-shadow:none;border-radius:22px}
+.pw-row{border-left:0;border-radius:22px}
+.pw-row .rh::before{content:"";display:inline-block;width:8px;height:8px;border-radius:9px;background:var(--c);margin-right:8px;vertical-align:2px}
+.pw-tag{border-radius:999px}
+.pw-freq{border-radius:999px}
+.pw-orb{background:var(--card-3)}
+.lmore{background:var(--card);border-radius:22px;padding:0 16px}
+.lmore>summary{list-style:none;min-height:56px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;font-size:16px;cursor:pointer}
+.lmore>summary::-webkit-details-marker{display:none}
+.lmore>summary small{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.lmore>summary::after{content:"›";color:var(--muted);font-size:20px;transition:transform .2s}
+.lmore[open]>summary::after{transform:rotate(90deg)}
+.lmore>.lbody{display:grid;gap:12px;padding:0 0 16px}
+
+/* ---- Tasks: impulse as one quiet row ---- */
+.tk-impd{background:var(--card);border-radius:22px;padding:0 16px}
+.tk-impd>summary{list-style:none;min-height:54px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.tk-impd>summary::-webkit-details-marker{display:none}
+.tk-impd>summary .ey{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);white-space:nowrap}
+.tk-impd>summary .tx{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-impd>summary::after{content:"›";color:var(--muted);font-size:20px;transition:transform .2s}
+.tk-impd[open]>summary::after{transform:rotate(90deg)}
+.tk-impd>div{padding:0 0 16px;display:grid;gap:8px}
+
+/* ---- wide screens: glass sidebar instead of the bar ---- */
+@media (min-width: 1000px){
+  body{padding:0 32px 48px 268px}
+  nav.tabs{top:12px;bottom:12px;left:12px;right:auto;width:228px;max-width:none;margin:0;border-radius:24px;padding:72px 10px 18px;border:.5px solid var(--glass-line);background:var(--glass);box-shadow:var(--glass-shadow)}
+  nav.tabs::before{content:"OTI COACH";font-family:var(--display);font-weight:800;letter-spacing:.06em;color:var(--ink);top:26px;left:22px}
+  nav.tabs .in{gap:4px}
+  nav.tabs button{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14px;padding:0 12px;min-height:42px;border-radius:14px}
+  nav.tabs button svg{width:20px;height:20px}
+  #v-train{left:252px}
+  .trfoot{left:268px}
+  .wkstrip .dy b{width:44px;height:44px}
+  .btiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* ---- tasks cards: no coloured top border, ink headings ---- */
+#v-tasks .card,[data-tkcard]{border-top:0}
+#v-tasks h3,[data-tkcard] h3{color:var(--ink)}
+
+body.on-tasks{background:var(--bg)}
+
+/* ---- calm (23.10.2026, Oti: "noch zu viel bunt"): one accent only. Everything is ink and earth grey;
+   rust marks what is now (today, current exercise, start button) and what needs attention. ---- */
+:root,:root[data-theme="dark"]{
+  --strain:var(--ink); --sleep:var(--ink); --steps:var(--ink); --protein:var(--ink); --focus:var(--ink); --meal:var(--ink);
+  --run:var(--ink-2); --lift:var(--ink-2); --sport:var(--ink-2);
+  --rec-g:var(--ink); --rec-y:var(--ink); --rec-r:var(--accent);
+  --g-soft:var(--card-2); --y-soft:var(--card-2); --r-soft:color-mix(in srgb,var(--accent) 12%,transparent);
+  --g-ink:var(--ink); --y-ink:var(--ink); --r-ink:var(--accent-ink);
+  --sage:var(--ink);
+  --z1:var(--card-3); --z2:color-mix(in srgb,var(--ink) 35%,var(--card)); --z3:color-mix(in srgb,var(--ink) 60%,var(--card)); --z4:var(--ink); --z5:var(--accent);
+  --hero:#EDE4D8; --hero-muted:#5E554B;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --strain:var(--ink); --sleep:var(--ink); --steps:var(--ink); --protein:var(--ink); --focus:var(--ink); --meal:var(--ink);
+  --run:var(--ink-2); --lift:var(--ink-2); --sport:var(--ink-2);
+  --rec-g:var(--ink); --rec-y:var(--ink); --rec-r:var(--accent);
+  --g-soft:var(--card-2); --y-soft:var(--card-2); --r-soft:color-mix(in srgb,var(--accent) 14%,transparent);
+  --g-ink:var(--ink); --y-ink:var(--ink); --r-ink:var(--accent-ink);
+  --sage:var(--ink);
+  --hero:#211A15; --hero-muted:#BFB2A4;
+}}
+:root[data-theme="dark"]{--hero:#211A15; --hero-muted:#BFB2A4}
+.ptw,:root .ptw{--pw-prayer:var(--muted); --pw-fast:var(--muted); --pw-sol:var(--muted); --pw-comm:var(--muted); --pw-serv:var(--muted); --pw-other:var(--muted); --pw-done:var(--ink)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ptw{--pw-prayer:var(--muted); --pw-fast:var(--muted); --pw-sol:var(--muted); --pw-comm:var(--muted); --pw-serv:var(--muted); --pw-other:var(--muted); --pw-done:var(--ink)}}
+.pw-tick[aria-pressed="true"] .box{color:var(--bg)}
+.tb{color:var(--ink);background:var(--card-2)}
+.btile .ring{margin:2px 0}
+.btile .rrow{display:flex;align-items:center;gap:12px}
+.btile .rrow .bs{flex:1}
+:root,:root[data-theme="dark"]{--work:var(--ink); --work-on:var(--bg); --work-soft:var(--card-2); --work-ink:var(--ink)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--work:var(--ink); --work-on:var(--bg); --work-soft:var(--card-2); --work-ink:var(--ink)}}
+.trfoot button{background:var(--ink);color:var(--bg)}

@@ -13,7 +13,7 @@ function renderWeek(){
       ${ring(def? dn/def.total : 0, def?(isDone(k,def)?"var(--rec-g)":"var(--load)"):"var(--track)", 52, 6, `<span style="font-size:13px">${SHORT[d.date.getDay()]}</span>`, "", 13)}
       <div style="display:grid;gap:4px;min-width:0"><div class="spread" style="flex-wrap:nowrap;align-items:flex-start"><span style="font-weight:700;display:inline-flex;align-items:center;gap:8px;min-width:0" class="${def?`ty-${typeKey(def.type)}`:""}">${def?tbadge(def.type,"sm"):""}<span class="tname" style="min-width:0">${def?esc(def.name):d.conflict?"No slot":d.date.getDay()===6?"Day off":"Rest"}${def?`<span class="muted small" style="white-space:nowrap"> · ${fmt(d.session.start)}</span>`:""}</span></span><span class="small muted mono">${d.date.getDate()}.${d.date.getMonth()+1}.</span></div>
       <div class="row" style="gap:6px">${def&&isDone(k,def)?`<span class="chip g">Done</span>`:""}${d.session?.moved?`<span class="chip">moved from ${d.session.fromDay}</span>`:""}${d.bed.late?`<span class="chip sleep">bed ${fmt(d.bed.bed)}</span>`:""}${d.wake.early?`<span class="chip sleep">wake ${fmt(d.wake.wake)}</span>`:""}${d.afterLate&&def?.hard?`<span class="chip y">after late night</span>`:""}${(()=>{ const x = k<today? strainFor(k) : null; return x!=null? `<span class="chip load">strain ${x.toFixed(1)}</span>` : ""; })()}${workoutsFor(k).map(w=>`<span class="chip watch">⌚ ${esc(wType(w))} ${w.min} min${w.km?` · ${w.km.toFixed(1)} km`:""}</span>`).join("")}</div></div>
-      <div class="full"><button type="button" class="stripbtn" data-daycal="${k}" aria-label="Open day calendar">${strip(d,false)}</button>${def?`<details ${k===today?"open":""}><summary>${dn}/${def.total} sets · show workout</summary><div style="display:grid;gap:8px;margin-top:8px">${blocksHtml(def,k)}</div></details>`:""}</div></div>`;
+      <div class="full"><button type="button" class="stripbtn" data-daycal="${k}" aria-label="Open day calendar">${strip(d,false)}</button>${def?`<details><summary>${dn}/${def.total} sets · show workout</summary><div style="display:grid;gap:8px;margin-top:8px">${blocksHtml(def,k)}</div></details>`:""}</div></div>`;
   }
   $("#v-week").innerHTML = html;
   bindChecks("#v-week", defForKey);
@@ -233,7 +233,7 @@ function sleepChart(nights){
   const lbl = nights.map(([k],i)=> (i%Math.ceil(n/6)===0||i===n-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--mono)">${fromKey(k).getDate()}.${fromKey(k).getMonth()+1}</text>`:"").join("");
   return `<div class="chart" data-chart><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sleep windows for the last ${n} nights">${g}${bars}${lbl}</svg><div class="tip" hidden></div></div><p class="small muted">Each bar is one night, from falling asleep (top) to waking (bottom). Tap a bar for details.</p>`;
 }
-const ZC = ["#5B6B7A","#3FA9FF","#2EE59D","#FFD23F","#FF5A52"];
+const ZC = ["var(--z1)","var(--z2)","var(--z3)","var(--z4)","var(--z5)"];  // heart rate zones, warm ramp (23.10.2026)
 // a watch workout that matches the planned session ticks it off completely (all sets), once per workout
 function autoTick(w){
   const ty = typeKey(wType(w)); if(ty==="walk") return false;

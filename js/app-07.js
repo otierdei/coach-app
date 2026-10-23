@@ -27,7 +27,7 @@ function renderLife(){
   bindHabitTicks(root);
   root.querySelectorAll("[data-prompt]").forEach(b=>b.onclick = async ()=>{ const id = b.dataset.prompt, per = b.dataset.per, k = dateKey(new Date()), list = habits.prompts[id] = habits.prompts[id]||[];
     if(promptDone(id, per).done){ const r = promptDone(id, per); habits.prompts[id] = list.filter(x=>x!==r.last); } else list.push(k); renderLife(); await saveHabits(); });
-  root.querySelectorAll("[data-open-prayer]").forEach(b=>b.onclick = ()=>{ const d = $("#pr-"+b.dataset.openPrayer); if(d){ d.open = true; d.scrollIntoView({behavior:"smooth", block:"start"}); } });
+  root.querySelectorAll("[data-open-prayer]").forEach(b=>b.onclick = ()=>{ const d = $("#pr-"+b.dataset.openPrayer); if(d){ const m = d.closest(".lmore"); if(m) m.open = true; d.open = true; d.scrollIntoView({behavior:"smooth", block:"start"}); } });
   root.querySelectorAll("[data-irr]").forEach(b=>b.onclick = async ()=>{ const wk = dateKey(mondayOf(new Date())); habits.fruit[wk] = {...(habits.fruit[wk]||{}), irr:Number(b.dataset.irr)}; renderLife(); await saveHabits(); });
   const ns = $("#pwNoteSave"); if(ns) ns.onclick = async ()=>{ const wk = dateKey(mondayOf(new Date())); habits.fruit[wk] = {...(habits.fruit[wk]||{}), note:$("#pwNote").value.trim()}; ns.textContent = L("Saved","Gespeichert"); await saveHabits(); };
   const br = $("#pwBreath"); if(br) br.onclick = ()=>breathe(br);
@@ -250,7 +250,8 @@ const IMPULSES = [
 function impulseCard(){
   const day = Math.floor((Date.now() - new Date().getTimezoneOffset()*60000) / 86400000);
   const [who, book, en, de, aEn, aDe] = IMPULSES[day % IMPULSES.length];
-  return `<div class="card tk-imp"><div class="eyebrow">${L("Today's impulse","Impuls für heute")} · ${esc(who)}</div><p class="tk-imp-t">${L(en,de)}</p><p class="small"><b>${L("Today","Heute")}:</b> ${L(aEn,aDe)}</p><p class="small muted">${L(`Idea from "${book}", in our words`,`Gedanke aus "${book}", sinngemäß`)}</p></div>`;
+  // 23.10.2026: one quiet row that opens on tap, so the list comes first
+  return `<details class="tk-impd tk-imp"><summary><span class="ey">${L("Impulse","Impuls")}</span><span class="tx">${L(en,de)}</span></summary><div><p style="font-weight:600;font-size:16px;line-height:1.4">${L(en,de)}</p><p class="small"><b>${L("Today","Heute")}:</b> ${L(aEn,aDe)}</p><p class="small muted">${esc(who)} · ${L(`idea from "${book}", in our words`,`Gedanke aus "${book}", sinngemäß`)}</p></div></details>`;
 }
 
 /* ----- views ----- */
@@ -302,10 +303,11 @@ function viewToday(){
   h += pinned.length ? `<div class="list">${pinned.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div>` : `<p class="small muted">${L("Pick up to 3 tasks with ☆. Three that get done beat ten that wait.","Wähle bis zu 3 Aufgaben mit ☆. Drei, die fertig werden, schlagen zehn, die warten.")}</p>`;
   if(doneToday.length) h += `<p class="small" style="color:var(--g-ink)">✓ ${doneToday.length} ${L("done today","heute erledigt")}: ${doneToday.map(t=>esc(t.title)).join(", ")}</p>`;
   h += `</div>`;
-  if(overdue.length) h += `<div class="card"><h3 style="color:var(--r-ink)">${L("Overdue","Überfällig")}</h3><div class="list">${overdue.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></div>`;
-  if(soon.length) h += `<div class="card"><h3>${L("Due in the next 7 days","Fällig in den nächsten 7 Tagen")}</h3><div class="list">${soon.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></div>`;
+  // 23.10.2026: long lists start closed, the count stays visible
+  if(overdue.length) h += `<details class="card tk-area" ${overdue.length<=3?"open":""}><summary><span style="color:var(--r-ink)">${L("Overdue","Überfällig")}</span><span class="tk-cnt">${overdue.length}</span></summary><div class="list">${overdue.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></details>`;
+  if(soon.length) h += `<details class="card tk-area" ${soon.length<=5?"open":""}><summary><span>${L("Next 7 days","Nächste 7 Tage")}</span><span class="tk-cnt">${soon.length}</span></summary><div class="list">${soon.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></details>`;
   const hi = open.filter(t=>t.prio==="high" && !t.due && t.today!==k);
-  if(hi.length) h += `<div class="card"><h3>${L("High priority, no date","Wichtig, ohne Datum")}</h3><div class="list">${hi.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></div>`;
+  if(hi.length) h += `<details class="card tk-area" ${hi.length<=3?"open":""}><summary><span>${L("High priority, no date","Wichtig, ohne Datum")}</span><span class="tk-cnt">${hi.length}</span></summary><div class="list">${hi.map(t=>taskRow(t,{showArea:true,pin:true})).join("")}</div></details>`;
   return h;
 }
 function areaStats(aid, sid){ const ts = tasksDoc.tasks.filter(t=>!t.review && t.area===aid && (sid===undefined || (t.sub||null)===sid)); const open = ts.filter(t=>!t.done); return {open, all:ts, done: ts.filter(t=>t.done && t.doneAt>=weekStart())}; }

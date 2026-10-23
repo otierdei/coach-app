@@ -166,9 +166,7 @@ function ruleRows(){
 function spiritHtml(){
   const now = new Date(), k = dateKey(now), H = habOf(k), mon = mondayOf(now), ew = eveningWeek(mon), dow = now.getDay();
   const fruitKey = dateKey(mon), F = habits.fruit[fruitKey]||{};
-  let h = `<div style="display:grid;gap:12px"><h2 style="font-size:40px;line-height:1.05;letter-spacing:-.02em;font-weight:500">Rule of Life</h2>
-    <div class="row" style="gap:8px"><a class="pw-link solid" href="https://www.practicingtheway.org/reflection" target="_blank" rel="noopener">${L("Spiritual Health Reflection","Spiritual Health Reflection")}</a><a class="pw-link" href="https://www.practicingtheway.org/ruleoflifebuilder" target="_blank" rel="noopener">Rule of Life Builder</a></div>
-    <p class="pw-sub" style="font-size:12.5px">${L("Retake the reflection every quarter: next on Monday 14 December, 08:00.","Die Reflexion jedes Quartal wiederholen: als Nächstes Montag, 14. Dezember, 08:00.")}</p></div>`;
+  let h = `<div style="display:grid;gap:2px"><span class="pw-eye">${L("Rule of Life","Rule of Life")}</span><h2>${L("Life","Leben")}</h2></div>`;
   h += `<div class="pw-goalrow"><div class="pw-goal"><div class="g">${L("Becoming less selfish and irritable.","Weniger selbstbezogen und gereizt werden.")}</div>
     <div class="i">${L("I am someone who ends the day with God and lives at an unhurried pace.","Ich bin jemand, der den Tag mit Gott beendet und in einem unhastigen Tempo lebt.")}</div></div>
     <div class="pw-trio">${[["Daily","Täglich","Evening Rhythm","Abendrhythmus"],["Weekly","Wöchentlich","Thursday fast","Fasten am Donnerstag"],["Weekly","Wöchentlich","Sabbath, 12 hours","Sabbat, 12 Stunden"]].map(x=>`<div class="pw-mini"><span class="pw-freq">${L(x[0],x[1])}</span><span>${L(x[2],x[3])}</span></div>`).join("")}</div></div>`;
@@ -193,26 +191,30 @@ function spiritHtml(){
     <div class="pw-sub" style="font-size:12.5px">${L("Evening Rhythm, last 4 weeks. Dashed days are free (Friday, Saturday).","Abendrhythmus, letzte 4 Wochen. Gestrichelte Tage sind frei (Freitag, Samstag).")}</div>${dotsHtml()}</div>`;
   // fruit
   const weeks = [...Array(8)].map((_,i)=>dateKey(addDays(mon,-7*(7-i))));
-  h += `<div class="pw-card"><h3>${L("The fruit","Die Frucht")}</h3>
+  h += `<details class="lmore" ${now.getDay()===0?"open":""}><summary><span>${L("The fruit","Die Frucht")}<small>${L("Weekly check, Sunday night","Wochencheck, Sonntagabend")}${F.irr?` · ${L("this week","diese Woche")} ${F.irr}/5`:""}</small></span></summary><div class="lbody">
     <p class="pw-sub">${L("Sunday night: how irritable was I this week? 1 is calm and patient, 5 is short fused all week. This measures change, not effort.","Sonntagabend: Wie gereizt war ich diese Woche? 1 ist ruhig und geduldig, 5 ist die ganze Woche kurz angebunden. Das misst Veränderung, nicht Anstrengung.")}</p>
     <div class="pw-scale" role="group" aria-label="${L("Irritability this week","Gereiztheit diese Woche")}">${[1,2,3,4,5].map(n=>`<button type="button" data-irr="${n}" aria-pressed="${F.irr===n}">${n}</button>`).join("")}</div>
     <label class="f" for="pwNote" style="color:var(--pw-muted)">${L("Where did hurry or self win this week? (optional)","Wo haben Eile oder Ego diese Woche gewonnen? (optional)")}<textarea id="pwNote">${esc(F.note||"")}</textarea></label>
     <button type="button" class="pw-link" id="pwNoteSave" style="justify-self:start">${L("Save note","Notiz speichern")}</button>
     ${weeks.some(w=>habits.fruit[w]?.irr)?`<div class="pw-bars" aria-label="${L("Last 8 weeks","Letzte 8 Wochen")}">${weeks.map(w=>{ const v = habits.fruit[w]?.irr; return `<div><i style="height:${v?v*10:2}px;${v?"":"opacity:.25"}"></i><span>${fmtDate(w,{day:"numeric",month:"numeric"})}</span></div>`; }).join("")}</div>`:""}
-    ${verse("gal5","--pw-goal")}</div>`;
+    ${verse("gal5","--pw-goal")}</div></details>`;
   // rule
-  h += `<div style="display:grid;gap:4px;margin-top:6px"><span class="pw-eye">${L("Your Rule","Deine Rule")}</span><h2>${L("Practices","Praktiken")}</h2></div><div class="pw-rule">`;
-  for(const r of ruleRows()) h += `<div class="pw-row ${r.cls}"><div class="rh">${L(r.h[0],r.h[1])}</div><div class="rd">${L(r.d[0],r.d[1])}</div>${r.items.map(it=>`<div class="pw-prac"><div class="ph">${it.c}${it.tag}</div><div>${esc(L(it.t[0],it.t[1]))}</div>${it.extra||""}</div>`).join("")}</div>`;
-  h += `</div>`;
+  const rr = ruleRows();
+  h += `<details class="lmore"><summary><span>${L("Your Rule · practices","Deine Rule · Praktiken")}<small>${rr.map(r=>esc(L(r.h[0],r.h[1]))).join(" · ")}</small></span></summary><div class="lbody pw-rule">`;
+  for(const r of rr) h += `<div class="pw-row ${r.cls}"><div class="rh">${L(r.h[0],r.h[1])}</div><div class="rd">${L(r.d[0],r.d[1])}</div>${r.items.map(it=>`<div class="pw-prac"><div class="ph">${it.c}${it.tag}</div><div>${esc(L(it.t[0],it.t[1]))}</div>${it.extra||""}</div>`).join("")}</div>`;
+  h += `</div></details>`;
   // prayers
-  h += `<div style="display:grid;gap:4px;margin-top:6px"><span class="pw-eye">${L("Guided prayers","Geführte Gebete")}</span><h2>${L("Pray","Beten")}</h2></div><div style="display:grid;gap:8px">`;
+  h += `<details class="lmore" id="lmPray"><summary><span>${L("Pray","Beten")}<small>${PRAYERS.length} ${L("guided prayers","geführte Gebete")}</small></span></summary><div class="lbody">`;
   for(const p of PRAYERS) h += `<details class="pw-acc" id="pr-${p.id}"><summary><span>${L(p.t[0],p.t[1])}<small>${L(p.s[0],p.s[1])}</small></span></summary><div class="body">${p.body()}</div></details>`;
-  h += `</div>`;
+  h += `</div></details>`;
   // verses
-  h += `<div style="display:grid;gap:4px;margin-top:6px"><span class="pw-eye">${L("Scripture for this season","Bibelworte für diese Zeit")}</span><h2>${L("Verses","Verse")}</h2></div>`;
+  h += `<details class="lmore"><summary><span>${L("Verses","Verse")}<small>${L("Scripture for this season","Bibelworte für diese Zeit")}</small></span></summary><div class="lbody">`;
   const groups = [[["Unhurried","Unhastig"],["mt11","ps46","is30"],"--pw-sol"],[["Slow to anger","Langsam zum Zorn"],["jas1","eph4","pr27"],"--pw-comm"],[["Less self","Weniger Ich"],["php2","mt6a"],"--pw-serv"],[["Lying down in peace","In Frieden liegen"],["ps139","pe5","ps4"],"--pw-prayer"]];
   h += `<div style="display:grid;gap:8px">${groups.map(g=>`<details class="pw-acc"><summary><span>${L(g[0][0],g[0][1])}<small>${g[1].map(id=>L(V[id].ref[0],V[id].ref[1])).join(" · ")}</small></span></summary><div class="body">${g[1].map(id=>verse(id,g[2])).join("")}</div></details>`).join("")}</div>`;
   h += `<p class="pw-sub" style="font-size:12px">${L("Verse text: World English Bible (public domain). Links open the ESV.","Bibeltext: Luther 1912 (gemeinfrei). Links öffnen die Lutherbibel 2017.")} <a href="https://www.practicingtheway.org/" target="_blank" rel="noopener" style="color:inherit">Practicing the Way</a></p>`;
+  h += `</div></details>`;
+  h += `<details class="lmore"><summary><span>${L("Reflection","Reflexion")}<small>${L("Retake every quarter","Jedes Quartal wiederholen")}</small></span></summary><div class="lbody"><div class="row" style="gap:8px"><a class="pw-link solid" href="https://www.practicingtheway.org/reflection" target="_blank" rel="noopener">${L("Spiritual Health Reflection","Spiritual Health Reflection")}</a><a class="pw-link" href="https://www.practicingtheway.org/ruleoflifebuilder" target="_blank" rel="noopener">Rule of Life Builder</a></div>
+    <p class="pw-sub" style="font-size:12.5px">${L("Retake the reflection every quarter: next on Monday 14 December, 08:00.","Die Reflexion jedes Quartal wiederholen: als Nächstes Montag, 14. Dezember, 08:00.")}</p></div></details>`;
   return h;
 }
 

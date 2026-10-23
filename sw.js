@@ -1,6 +1,6 @@
 /* Offline cache for the app shell. Data requests (Apps Script) always go to the network;
    the app itself keeps the last data in localStorage, so it opens offline with the last state. */
-const CACHE = "coach-v3";
+const CACHE = "coach-v4";
 
 /* Push from the coach push worker. Every push must show a notification, otherwise Safari may revoke the permission. */
 self.addEventListener("push", e => {
@@ -20,7 +20,7 @@ self.addEventListener("notificationclick", e => {
     return self.clients.openWindow(target);
   }));
 });
-const SHELL = ["./", "index.html", "styles.css", "api.js", "manifest.webmanifest",
+const SHELL = ["./", "index.html", "styles.css", "theme.css", "api.js", "manifest.webmanifest",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

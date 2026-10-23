@@ -89,23 +89,39 @@ function renderTaskSheet(t, isNew){
 /* ================= shell ================= */
 function render(){
   try{
-    if(tab==="today"){ renderToday(); injectTodayTasks(); } else if(tab==="tasks") renderTasks(); else if(tab==="week") renderWeek(); else if(tab==="sleep") renderSleep(); else if(tab==="progress") renderProgress(); else if(tab==="life") renderLife(); else if(!$("#v-setup").innerHTML) renderSetup();
+    if(tab==="today"){ renderToday(); injectTodayTasks(); } else if(tab==="tasks") renderTasks(); else if(tab==="week") renderWeek(); else if(tab==="sleep"){ renderSleep(); fitSeg(); } else if(tab==="progress"){ renderProgress(); fitSeg(); } else if(tab==="life") renderLife(); else if(!$("#v-setup").innerHTML) renderSetup();
+    if(tab!=="today") closeTraining(true);
   }catch(e){ console.error(e); }
   if(calState.status==="ok") setSync("g","Live"); else if(calState.status==="err") setSync("y","Template only"); else if(calState.status==="loading") setSync("","Syncing"); else setSync("","Offline");
 }
 function injectTodayTasks(){
   const v = $("#v-today"); if(!v || v.querySelector("[data-tkcard]")) return;
   const cards = v.querySelectorAll(":scope > .card"); const tmp = document.createElement("div"); tmp.innerHTML = todayTasksCard(); const c = tmp.firstElementChild; if(!c) return;
-  if(cards.length) cards[0].after(c); else v.appendChild(c);
+  const slot = v.querySelector("[data-tk-slot]");
+  if(slot) slot.replaceWith(c); else if(cards.length) cards[0].after(c); else v.appendChild(c);
   bindTasks(v); tickClock();
 }
 // api.js merged a write with a newer server copy: continue with the merged doc (never write the old copy again)
 window.addEventListener("coach:merged", e=>{ const {name, data} = e.detail||{};
   if(name==="log") logData = {days:{}, ...data}; else if(name==="health") health = {days:{}, workouts:[], sources:[], driveSeen:{}, ...data}; else return;
   try{ bumpLog(); }catch(err){} planCache.clear(); render(); });
+// Fitness (23.10.2026): one tab in the bar for Progress and Sleep, switched with sub tabs at the top
+let fitSub = "progress";
+// the sub tabs survive direct re-renders (e.g. after changing a workout type in its sheet)
+{ const rp = renderProgress, rs = renderSleep; renderProgress = function(){ rp(); if(tab==="progress") fitSeg(); }; renderSleep = function(){ rs(); if(tab==="sleep") fitSeg(); }; }
+function fitSeg(){
+  const v = $("#v-"+tab); if(!v || v.querySelector(":scope > .fseg")) return;
+  const d = document.createElement("div"); d.className = "fseg"; d.setAttribute("role","group"); d.setAttribute("aria-label", L("Fitness area","Fitness Bereich"));
+  d.innerHTML = [["progress",L("Progress","Fortschritt")],["sleep",L("Sleep","Schlaf")]].map(([k,t])=>`<button type="button" data-fit="${k}" aria-pressed="${tab===k}">${t}</button>`).join("");
+  const head = v.firstElementChild; if(head && !head.classList.contains("card")) head.after(d); else v.prepend(d);
+  d.querySelectorAll("[data-fit]").forEach(b=>b.onclick = ()=>switchTab(b.dataset.fit));
+}
 function switchTab(t){
+  if(t==="fitness") t = fitSub;
+  if(t==="today" && trainOpen) closeTraining(true);
+  if(t==="sleep" || t==="progress") fitSub = t;
   tab = t; try{ sessionStorage.setItem("ohc-tab", t); }catch(e){}
-  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===t)));
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected", String(b.dataset.tab===t || (b.dataset.tab==="fitness" && (t==="sleep" || t==="progress")))));
   document.querySelectorAll("section.view").forEach(s=>s.hidden = s.id !== "v-"+t); document.body.classList.toggle("on-tasks", t==="tasks");
   if(t==="setup") renderSetup(); else render();
   window.scrollTo(0,0);

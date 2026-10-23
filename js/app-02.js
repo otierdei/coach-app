@@ -91,7 +91,7 @@ document.addEventListener("click", e=>{
   const bk = e.target.closest?.("[data-dayback]"); if(bk){ openDaySheet(bk.dataset.dayback); return; }
   // whole day card on the Week tab opens the day calendar (workout details and checkboxes keep their own taps)
   const wd = e.target.closest?.("[data-wday]"); if(wd && !e.target.closest("details,button,a,input,label,select,textarea")){ openDaySheet(wd.dataset.wday); return; }
-  if(e.target.closest?.("[data-gotrain]")){ closeSheet(); document.querySelector("#v-today .tcard, #v-today .card:nth-of-type(3)")?.scrollIntoView({behavior:"smooth", block:"start"}); }
+  if(e.target.closest?.("[data-gotrain]")){ closeSheet(); if(tab!=="today") switchTab("today"); openTraining(); }
 });
 /* ================= movement breaks: middle of the longest deep work block, Mon Wed Thu Fri ================= */
 // muscle groups a session loads: strength A = pull + legs, strength B = push, runs and football = legs
@@ -294,7 +294,10 @@ function journalHtml(){
 }
 
 /* ================= views ================= */
-let openDial = null;
+let openDial = null, trainOpen = false;
+function openTraining(){ trainOpen = true; const v = $("#v-train"); v.hidden = false; v.scrollTop = 0; document.body.classList.add("training"); const w = $(".wrap"); if(w) w.inert = true; $("#trBack")?.focus({preventScroll:true}); }
+function closeTraining(silent){ if(!trainOpen && silent) return; trainOpen = false; const v = $("#v-train"); if(v) v.hidden = true; document.body.classList.remove("training"); const w = $(".wrap"); if(w) w.inert = false; if(!silent){ window.scrollTo(0,0); $("#btnTrain")?.focus({preventScroll:true}); } }
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && trainOpen && $("#sheet")?.hidden !== false) closeTraining(); });
 function tomorrowCardHtml(){
   // v68: "Tomorrow" card under "Your day": calendar, training, music, fast day, tasks due tomorrow
   const t = addDays(new Date(), 1), kt = dateKey(t), dt = dayFromPlan(t);
@@ -326,8 +329,6 @@ function renderToday(){
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
 
   // ---- hero: three dials, each explains itself on tap ----
-  const recV = R.score==null ? "–" : `${R.score}<span style="font-size:.45em">%</span>`;
-  const dial = (id, label, inner) => `<button type="button" class="dial" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why">${inner}<span class="dl">${label}</span></button>`;
   let why = "";
   if(openDial==="rec") why = `${R.parts.length?`<div class="row" style="gap:6px">${R.parts.map(p=>`<span class="chip ${p[0]}">${esc(p[1])}</span>`).join("")}</div>`:""}
     <p>Recovery weighs HRV against your 21 day normal (40%), resting heart rate (30%) and sleep against your 7:30 need (30%). How you feel in the check in moves it a little.${R.estimated&&R.score!=null?" Estimated: not enough HRV history yet.":""}</p>`;
@@ -340,20 +341,11 @@ function renderToday(){
   if(openDial==="sleep") why = sm ? `<p><b>${dur(sm)}</b> asleep, ${Math.round(sm/profile.asleepNeed*100)}% of your 7:30 need.${hk.onset!=null&&hk.wakeAt!=null?` Asleep ${fmt(hk.onset)}, awake ${fmt(hk.wakeAt)}.`:""}</p><p>Tonight: last coffee ${esc(profile.coffeeCutoff)}, lights out <b>${fmt(d.bed.bed)}</b> for ${dur(d.bed.inBed)} until ${fmt(d.bed.nextWake)}.</p>` : `<p>No sleep synced for last night. Log it below so recovery isn't blind.</p>`;
   const coachLine = R.ill ? `${R.ill.text}. Keep today very easy.` : R.score==null ? "No data for last night yet. Do the check in below." :
     isFast(now) ? `Fast day. Keep strain between ${tgt[0]} and ${tgt[1]}.` : `${({g:"Green. Your body can take load.",y:"Yellow. Train, but hold something back.",r:"Red. Recovery beats training today."})[R.level]} Strain target ${tgt[0]} to ${tgt[1]}.`;
-  html += `<div class="card" style="gap:14px">
-    <div class="trio">
-      ${dial("strain","Strain", ring(yStrain!=null? yStrain/21 : 0, "var(--strain)", 92, 9, yStrain!=null? yStrain.toFixed(1) : "–", "", 25))}
-      ${dial("rec","Recovery", ring(R.score==null?0:R.score/100, REC_COLOR[R.level], 128, 12, recV, "", 42))}
-      ${dial("sleep","Sleep", ring(sm?sm/profile.asleepNeed:0, "var(--sleep)", 92, 9, sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", "", 25))}
-    </div>
-    <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>
-    <p class="coach">${esc(coachLine)}</p>
-    <div class="stats">
-      <div class="stat"><b style="color:var(--steps)">${ySteps!=null?(ySteps/1000).toFixed(1)+"k":"–"}</b><span>steps yesterday${yKcal?` · ${yKcal} kcal`:""}</span></div>
-      <div class="stat"><b style="color:var(--strain)">${wc.done}/${wc.planned}</b><span>sessions this week</span></div>
-      <div class="stat"><b style="color:var(--protein)">${prot}<span style="font-size:.55em"> / ${pt} g</span></b><span>protein today</span></div>
-    </div></div>`;
-
+  // ---- week strip (MCI style): tap a day for its calendar ----
+  { const mon = mondayOf(now), P = weekPlan(mon);
+    html += `<div class="wkstrip" role="group" aria-label="${L("This week","Diese Woche")}">${P.days.map(x=>`<span class="wd ${dateKey(x.date)===k?"now":""}">${SHORT[x.date.getDay()]}</span>`).join("")}
+      ${P.days.map(x=>{ const xk = dateKey(x.date), def = x.session?.def, dn = def && isDone(xk, def);
+        return `<button type="button" class="dy ${xk<k?"past":""} ${xk===k?"now":""} ${def?"tr":""} ${dn?"done":""}" data-daycal="${xk}" aria-label="${esc(x.date.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"}))}${def?` · ${esc(def.name)}`:""}"><b>${x.date.getDate()}</b><i></i></button>`; }).join("")}</div>`; }
   // ---- morning briefing, read aloud on tap ----
   if(briefing && briefing.date===k){
     const lines = (briefing.lines && briefing.lines.length ? briefing.lines : String(briefing.text||"").split(/\n+/)).filter(Boolean);
@@ -362,36 +354,82 @@ function renderToday(){
       <details><summary class="small">Read it</summary><div class="lines" data-notr style="margin-top:8px">${lines.map(x=>`<p>${esc(x)}</p>`).join("")}</div></details>
       <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div>`;
   }
+  // ---- today's training: one hero card, the session itself opens full screen ----
+  const exN = s ? s.def.blocks.filter(b=>!b.skip).length : 0, done0 = s && isDone(k, s.def);
+  // same order as the banners in the training view, so both screens give the same advice
+  const heroNote = !s ? "" : (R.ill && s.def.hard) ? `<b>${esc(R.ill.text)}.</b> Swap today's hard session for 30 min very easy or a walk.`
+    : isFast(now) ? `<b>Fast day.</b> Truly easy, HR under 145.` : (R.level==="y" && isFast(addDays(now,-1))) ? `<b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.`
+    : s.def.formNote ? `<b>${esc(s.def.formNote)}</b>` : adj ? `<b>${esc(adj.t)}.</b> ${esc(adj.lines[0]||"")}` : (lg.fullPlan && (R.level==="y"||R.level==="r")) ? `<b>Full plan today, your choice.</b>` : "";
+  const chgBtn = `<button type="button" class="ghost" id="btnTrain">${L("Change today's training","Training heute ändern")}</button>`;
+  html += `<div class="card thero ${s?`ty-${typeKey(s.def.type)}`:""}">
+    <div class="spread" style="flex-wrap:nowrap"><span class="eyebrow">${s?`${esc(s.def.type==="strength"?L("Strength","Kraft"):s.def.type==="run"?L("Run","Lauf"):s.def.type)} · ${fmt(s.start)} to ${fmt(s.end)}`:L("Today's training","Training heute")}</span>${s?`<span class="small">${L("Strain","Strain")} ≈ ${sessStrain.toFixed(0)}</span>`:""}</div>
+    <div><h2>${s? esc(s.def.name) : d.conflict? L("No slot today","Heute kein Platz") : L("Rest day","Ruhetag")}</h2>${s?.def.sub?`<div class="small">${esc(s.def.sub)}${s.moved?` · moved from ${s.fromDay}`:""}${s.override?` · ${L("your change","deine Änderung")}`:""}</div>`:""}</div>
+    ${s?`<div class="tnums"><div><b>${Math.round(s.end - s.start)}</b><span>${L("minutes","Minuten")}</span></div><div><b>${exN}</b><span>${L("exercises","Übungen")}</span></div><div><b>${loadDone}/${s.def.total}</b><span>${L("sets","Sätze")}</span></div></div>
+      ${heroNote ? `<div class="banner">${heroNote}</div>` : ""}
+      <button type="button" class="bigbtn" id="btnTrain"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>${done0? L("Training done · open","Training erledigt · öffnen") : loadDone? L("Continue training","Training fortsetzen") : L("Start training","Training starten")}</button>`
+    : d.conflict ? `<p class="small">The calendar left no room for ${esc(d.conflict)} today or on a flex day. Skip it rather than cramming it into a late night.</p>${chgBtn}`
+    : isFast(now) ? `<p class="small">Fast day. No run planned: nothing refills your tank until dinner. Walk 30 to 45 min, keep coffee before ${esc(profile.coffeeCutoff)}.</p>${chgBtn}`
+    : `<p class="small">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>${chgBtn}`}
+  </div>`;
+
+  // ---- body today: four tiles, tap one for the why ----
+  const st0 = stagesOf(health.days[k]);
+  // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
+  const tile = (id, title, pct, col, val, sub, extra) => `<button type="button" class="btile" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why"><span class="bt">${title}</span><div class="rrow">${ring(pct, col, 76, 8, val, "", 19)}</div>${extra||""}<span class="bs">${sub}</span></button>`;
+  html += `<div class="spread"><span class="sec">${L("Body today","Körper heute")}</span><span class="small muted">${wc.done}/${wc.planned} ${L("sessions this week","Einheiten diese Woche")}</span></div>
+  <div class="btiles">
+    ${tile("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in below","Check in unten") : ({g:L("Green · train as planned","Grün · wie geplant"),y:L("Yellow · hold back a little","Gelb · etwas zurückhalten"),r:L("Red · recover","Rot · erholen")})[R.level]||"")}
+    ${tile("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--ink)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`Deep ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("no stages yet","noch keine Phasen"), stageBar(st0))}
+    ${tile("strain", L("Strain yesterday","Strain gestern"), yStrain!=null? yStrain/21 : 0, "var(--ink)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}`)}
+    <div class="btile"><span class="bt">${L("Protein","Protein")}</span><div class="rrow">${ring(prot/pt, "var(--ink)", 76, 8, `${prot}`, "", 19)}<span class="bs">/ ${pt} g</span></div>
+      <div class="grid2" style="gap:6px">${[20,30,40].map(g=>`<button class="ghost" data-prot="${g}" style="min-height:34px;padding:4px 0;font-size:12px">+${g} g</button>`).join("")}<button class="ghost" data-prot="-10" aria-label="Remove 10 g" style="min-height:34px;padding:4px 0;font-size:12px">−10</button></div></div>
+  </div>
+  <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>
+  <p class="small muted" style="padding:0 4px">${esc(coachLine)}</p>
+  <div data-tk-slot></div>`;
+  if(k >= (profile.creatineFrom||"9999")) html += `<div class="card" style="gap:6px"><div class="spread" style="flex-wrap:nowrap"><div><div style="font-weight:700">Creatine 5 g</div><div class="small muted">Daily with a meal or water, also on fast and rest days.</div></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="Creatine taken">${CHECK_SVG}</button></div></div>`;
   // ---- movement break in the middle of deep work ----
   { const mb = microBreak(d);
     if(mb){ const done = !!lg.mb, red = R.level==="r";
       html += `<div class="card" style="gap:10px"><div class="spread" style="flex-wrap:nowrap"><div class="row" style="gap:12px;flex-wrap:nowrap;min-width:0">${tbadge("strength")}<div style="min-width:0"><div class="eyebrow">Movement break · ${fmt(mb.s)}</div><div style="font-weight:700">${esc(mb.reps)} ${esc(mb.name)}${red?` <span class="chip r" style="margin-left:4px">half today</span>`:""}</div></div></div>
         <button type="button" class="check mbc ${done?"on":""}" id="mbCheck" aria-pressed="${done}" aria-label="Movement break done">${CHECK_SVG}</button></div>
         ${mb.why?`<p class="small muted">${esc(mb.why)}</p>`:""}</div>`; } }
-  // ---- today's training ----
-  html += `<div class="card ${s?`tcard ty-${typeKey(s.def.type)}`:""}"><div class="spread" style="flex-wrap:nowrap;align-items:flex-start"><div class="row" style="gap:12px;flex-wrap:nowrap;align-items:flex-start;min-width:0">${s?tbadge(s.def.type,"lg"):""}<div><div class="eyebrow">${s?`${fmt(s.start)} to ${fmt(s.end)}${s.moved?` · moved from ${s.fromDay}`:""}${s.override?" · your change":""}`:"Today's training"}</div><h2 style="font-size:28px">${s? esc(s.def.name) : d.conflict? "No slot today" : "Rest day"}</h2>${s?.def.sub?`<div class="small muted">${esc(s.def.sub)}</div>`:""}</div></div>
-    ${s?ring(loadDone/s.def.total, "var(--rec-g)", 52, 6, isDone(k,s.def)?"✓":`<span style="font-size:14px">${loadDone}/${s.def.total}</span>`, "", 18):""}</div>`;
+
+  // ---- the session itself: full screen view (#v-train) ----
+  let th = "";
   if(s){
-    if(R.ill && s.def.hard) html += `<div class="banner r"><b>${esc(R.ill.text)}.</b> Swap today's hard session for 30 min very easy or a walk. If the values are normal tomorrow, the plan continues.</div>`;
-    else if(isFast(now)) html += `<div class="banner"><b>Fast day.</b> Truly easy, HR under 145. Break the fast with 40 g protein right after.</div>`;
-    else if(R.level==="y" && isFast(addDays(now,-1))) html += `<div class="banner"><b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.</div>`;
-    else if(s.def.formNote) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
-    else if(adj) html += `<div class="banner ${R.level}"><b>${esc(adj.t)}.</b> ${adj.lines.map(esc).join(". ")}.</div>`;
-    if(false) html += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
-    else if(lg.fullPlan && (R.level==="y"||R.level==="r")) html += `<div class="banner"><b>Full plan today, your choice.</b> It counts normally for your progression. <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Adjust to my recovery again</button></div>`;
-    html += `<p class="small muted">This session ≈ strain ${sessStrain.toFixed(0)} for the day, target ${tgt[0]} to ${tgt[1]}.${sessStrain > tgt[1]+1 ? " Above what recovery allows: trim it." : sessStrain < tgt[0]-2 && R.level==="g" && !isFast(now) ? " Room for a 20 to 30 min walk on top." : ""}</p>`;
-    html += blocksHtml(s.def, k);
-    html += rirHtml(s.def, k);
-    html += `<div class="row"><label class="f" for="rpe" style="grid-auto-flow:column;align-items:center;gap:8px">Session effort (RPE)<select id="rpe"><option value="">–</option>${[...Array(10)].map((_,i)=>`<option ${lg.rpe==i+1?"selected":""}>${i+1}</option>`).join("")}</select></label></div>`;
-  } else if(d.conflict) html += `<p class="small muted">The calendar left no room for ${esc(d.conflict)} today or on a flex day. Skip it rather than cramming it into a late night.</p>`;
-  else if(isFast(now)) html += `<p class="small muted">Fast day. No run planned: nothing refills your tank until dinner. Walk 30 to 45 min, keep coffee before ${esc(profile.coffeeCutoff)}.</p>`;
-  else html += `<p class="small muted">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>`;
+    if(R.ill && s.def.hard) th += `<div class="banner r"><b>${esc(R.ill.text)}.</b> Swap today's hard session for 30 min very easy or a walk. If the values are normal tomorrow, the plan continues.</div>`;
+    else if(isFast(now)) th += `<div class="banner"><b>Fast day.</b> Truly easy, HR under 145. Break the fast with 40 g protein right after.</div>`;
+    else if(R.level==="y" && isFast(addDays(now,-1))) th += `<div class="banner"><b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.</div>`;
+    else if(s.def.formNote) th += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
+    else if(adj) th += `<div class="banner ${R.level}"><b>${esc(adj.t)}.</b> ${adj.lines.map(esc).join(". ")}.</div>`;
+    if(false) th += `<div class="banner ${s.def.form}"><b>${esc(s.def.formNote)}</b> <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Use full plan today</button></div>`;
+    else if(lg.fullPlan && (R.level==="y"||R.level==="r")) th += `<div class="banner"><b>Full plan today, your choice.</b> It counts normally for your progression. <button type="button" class="ghost" id="btnFull" style="margin-top:8px">Adjust to my recovery again</button></div>`;
+    th += `<p class="small muted">This session ≈ strain ${sessStrain.toFixed(0)} for the day, target ${tgt[0]} to ${tgt[1]}.${sessStrain > tgt[1]+1 ? " Above what recovery allows: trim it." : sessStrain < tgt[0]-2 && R.level==="g" && !isFast(now) ? " Room for a 20 to 30 min walk on top." : ""}</p>`;
+    th += blocksHtml(s.def, k);
+    th += rirHtml(s.def, k);
+    th += `<div class="row"><label class="f" for="rpe" style="grid-auto-flow:column;align-items:center;gap:8px">Session effort (RPE)<select id="rpe"><option value="">–</option>${[...Array(10)].map((_,i)=>`<option ${lg.rpe==i+1?"selected":""}>${i+1}</option>`).join("")}</select></label></div>`;
+  } else if(d.conflict) th += `<p class="small muted">The calendar left no room for ${esc(d.conflict)} today or on a flex day. Skip it rather than cramming it into a late night.</p>`;
+  else if(isFast(now)) th += `<p class="small muted">Fast day. No run planned: nothing refills your tank until dinner. Walk 30 to 45 min, keep coffee before ${esc(profile.coffeeCutoff)}.</p>`;
+  else th += `<p class="small muted">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>`;
   const ov = (profile.overrides||{})[k];
-  html += `<details class="chg"><summary class="small">Change today's training</summary>
+  th += `<details class="chg"><summary class="small">Change today's training</summary>
     <div class="grid2" style="margin-top:10px"><label class="f" for="ovKey">Training<select id="ovKey">${[["","As planned"],["rest","Rest"],["easyRun","Easy run"],["long","Long run"],["intervals","Intervals"],["strengthA","Strength A"],["strengthB","Strength B"],["strengthAB","Strength A+B"]].map(([v,t])=>`<option value="${v}" ${(ov?.key||"")===v?"selected":""}>${t}</option>`).join("")}</select></label>
     <label class="f" for="ovStart">Start<input id="ovStart" type="time" value="${ov?.start || (s? fmt(s.start) : "17:00")}"></label>
     <label class="f" for="ovMin">Minutes (easy run)<input id="ovMin" type="number" min="15" max="120" step="5" value="${ov?.min||30}"></label></div>
-    <button id="btnOv" style="margin-top:10px">Save change</button></details></div>`;
+    <button id="btnOv" style="margin-top:10px">Save change</button></details>`;
+
+  if(s){
+    const segs = s.def.blocks.map((b,bi)=>{ if(b.skip) return ""; let on=0; for(let i=0;i<b.s;i++) if((lg.sets||{})[`${s.def.sessionKey}:${bi}:${i}`]) on++; return on===b.s?"d":""; }).filter((x,i)=>!s.def.blocks[i].skip);
+    { const ni = segs.indexOf(""); if(ni>=0) segs[ni] = "n"; }
+    const cur = Math.min(segs.length, segs.filter(x=>x==="d").length + 1);
+    $("#v-train").innerHTML = `<div class="tin"><div class="trhead"><button type="button" class="rbtn" id="trBack" aria-label="${L("Back to Today","Zurück zu Heute")}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${esc(s.def.name)}</h2><span></span></div>
+      <div class="trseg" aria-hidden="true">${segs.map(x=>`<i class="${x}"></i>`).join("")}</div>
+      <div class="trmeta"><div><span>TIME</span><b>${fmt(s.start)}</b></div><div><span>${L("EXERCISE","ÜBUNG")}</span><b>${cur}/${segs.length}</b></div></div>
+      ${th}</div>
+      <div class="trfoot"><button type="button" id="trDone">${isDone(k,s.def)? L("Done · back to Today","Fertig · zurück zu Heute") : L("Back to Today","Zurück zu Heute")}</button></div>`;
+  } else $("#v-train").innerHTML = `<div class="tin"><div class="trhead"><button type="button" class="rbtn" id="trBack" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><h2>${L("Training","Training")}</h2><span></span></div><div class="card">${th}</div></div>`;
+  $("#v-train").hidden = !trainOpen; document.body.classList.toggle("training", trainOpen); { const w = $(".wrap"); if(w) w.inert = trainOpen; }
 
   // ---- morning: check in, journal, protein in one place ----
   html += `<div class="card"><div class="spread"><h3>Morning</h3><span class="small muted">${lg.feel?"checked in ✓":"20 seconds"}</span></div>
@@ -402,13 +440,6 @@ function renderToday(){
     <div class="row" style="gap:8px">${JOURNAL.map(x=>`<button type="button" class="ghost jbtn ${logData.days[yk]?.j?.[x.k]?"on":""}" data-j="${x.k}" aria-pressed="${!!logData.days[yk]?.j?.[x.k]}" style="padding:7px 12px;font-size:13px">${esc(x.t)}</button>`).join("")}</div>
     <button id="btnCheckin" class="primary">Save check in</button></div>`;
 
-  // ---- protein and creatine: own card ----
-  html += `<div class="card"><div class="spread"><h3>Protein</h3><span class="mono" style="font-size:15px">${prot} / ${pt} g</span></div>
-    <div class="bar"><i style="width:${clamp(prot/pt*100,0,100)}%;background:var(--protein)"></i></div>
-    <div class="row">${[20,30,40].map(g=>`<button class="ghost" data-prot="${g}">+${g} g</button>`).join("")}<button class="ghost" data-prot="-10" aria-label="Remove 10 g">−10</button></div>
-    <p class="small muted">500 g Magerquark = 60 g, a shake = 25 to 30 g.</p>
-    ${k >= (profile.creatineFrom||"9999") ? `<div class="spread" style="flex-wrap:nowrap;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)"><div><div style="font-weight:700">Creatine 5 g</div><div class="small muted">Daily with a meal or water, also on fast and rest days.</div></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="Creatine taken">${CHECK_SVG}</button></div>` : ""}</div>`;
-
   html += rhythmCardHtml();
   html += `<details class="card"><summary>Your day</summary>
     ${allDayFor(now).length?`<div class="small muted">All day: ${allDayFor(now).map(esc).join(", ")}</div>`:""}
@@ -418,8 +449,11 @@ function renderToday(){
     <button id="btnCoach">Review my week</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
   $("#v-today").innerHTML = html;
 
-  document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); });
-  bindChecks("#v-today", defForKey);
+  document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); injectTodayTasks(); });
+  bindChecks("#v-train", defForKey);
+  $("#btnTrain")?.addEventListener("click", ()=>openTraining());
+  $("#trBack")?.addEventListener("click", ()=>closeTraining());
+  $("#trDone")?.addEventListener("click", ()=>closeTraining());
   $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; else if(!L.form) L.form = recLevel(k);
     for(const e of Object.values(L.prog||{})) e.full = !!L.fullPlan;
     bumpLog(); planCache.clear(); render(); await saveDoc("log", logData); });
