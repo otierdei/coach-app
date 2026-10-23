@@ -73,7 +73,7 @@ const ASSIST_TOOL = {
   input_schema: { type: "object", properties: {
     action: { type: "string", enum: ["create", "update", "delete", "none"] },
     id: { type: "string", description: "id of the existing event for update or delete, taken from the event list" },
-    title: { type: "string" }, start: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all day" },
+    title: { type: "string", description: "what the event is, short, in Oti's words, e.g. Zahnarzt, Bandprobe" }, start: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all day" },
     end: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD (exclusive) for all day" },
     allDay: { type: "boolean" }, location: { type: "string" },
     reply: { type: "string", description: "one short sentence in the language Oti used, saying what will happen or what is missing" }
@@ -81,16 +81,17 @@ const ASSIST_TOOL = {
 };
 const ASSIST_CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const ASSIST_SCHEMA = { type: "object", properties: {
-  action: { type: "string", enum: ["create", "update", "delete", "none"] }, id: { type: "string" }, title: { type: "string" },
+  action: { type: "string", enum: ["create", "update", "delete", "none"] }, id: { type: "string" }, title: { type: "string", description: "what the event is, short, in Oti's words, e.g. Zahnarzt, Bandprobe" },
   start: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all day" }, end: { type: "string" },
   allDay: { type: "boolean" }, location: { type: "string" }, reply: { type: "string", description: "one short German sentence for Oti" } },
-  required: ["action", "reply"] };
+  required: ["action", "title", "start", "reply"] };
 // the next 15 days in Berlin time, so the model does not have to do date maths
 function dayTable() {
   const f = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" });
   const out = [];
   for (let i = 0; i < 15; i++) { const d = new Date(Date.now() + i * 864e5); const p = Object.fromEntries(f.formatToParts(d).map(x => [x.type, x.value]));
-    out.push(`${i === 0 ? "heute" : i === 1 ? "morgen" : i === 2 ? "übermorgen" : ""} ${p.weekday} = ${p.year}-${p.month}-${p.day}`.trim()); }
+    const tag = i === 0 ? "heute" : i === 1 ? "morgen" : i === 2 ? "übermorgen" : i < 8 ? `diesen und nächsten ${p.weekday}` : `${p.weekday} in einer Woche`;
+    out.push(`${tag} (${p.weekday}) = ${p.year}-${p.month}-${p.day}`); }
   return out.join("\n");
 }
 async function doAssist(env, body) {
@@ -104,7 +105,8 @@ async function doAssist(env, body) {
   const sys = "You turn one sentence from Oti into exactly one change to his Google calendar. Time zone Europe/Berlin. " +
     "Now: " + String(body.now || new Date().toISOString()).slice(0, 40) + ".\nDates:\n" + dayTable() + "\nDefault length 60 minutes if no end is given. " +
     "Use the date table for relative dates (morgen, übermorgen, nächsten Freitag). For update or delete use only an id from the event list and never a recurring event. " +
-    "If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Answer only with JSON.";
+    "title is the event name only (Zahnarzt, Bandprobe), never empty for create; location only if he names a place. start and end as local time YYYY-MM-DDTHH:MM without offset. " +
+    "reply: one short German sentence. If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Answer only with JSON.";
   const user = "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text;
   let out = null, err = null;
   if (env.AI) {
@@ -129,7 +131,8 @@ async function doAssist(env, body) {
   // only ids that were really in the list
   if ((out.action === "update" || out.action === "delete") && !events.some(e => e.id === out.id && !e.recurring)) { out.action = "none"; out.reply = out.reply || "Welchen Termin meinst du?"; }
   await log(env, "assist", out.action, 0, 0, 0, text.slice(0, 200));
-  const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: String(out.start || ""), end: String(out.end || ""), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
+  const clean = v => { const m = String(v || "").match(/^(\d{4}-\d{2}-\d{2})(T\d{2}:\d{2})?/); return m ? m[1] + (m[2] || "") : ""; };
+  const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: clean(out.start), end: clean(out.end), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
   return { ok: true, action: out.action, id: out.id || null, event: ev, reply: String(out.reply || "").slice(0, 300) };
 }
 
