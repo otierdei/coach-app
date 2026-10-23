@@ -341,3 +341,4 @@ body.on-tasks{background:var(--bg)}
 #v-today .fsec.folded{background:var(--card);border-radius:22px}
 #v-today .fall{min-height:32px;padding:4px 12px;font-size:13px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){#v-today .fhd svg{transition:none}}
+#v-today .fsec:not(.folded) > .fhd{top:-6px;right:0}
