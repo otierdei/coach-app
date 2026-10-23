@@ -245,3 +245,12 @@ body.on-tasks{background:var(--bg)}
 :root,:root[data-theme="dark"]{--work:var(--ink); --work-on:var(--bg); --work-soft:var(--card-2); --work-ink:var(--ink)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--work:var(--ink); --work-on:var(--bg); --work-soft:var(--card-2); --work-ink:var(--ink)}}
 .trfoot button{background:var(--ink);color:var(--bg)}
+
+/* ---- ring colours (23.10.2026, Oti: "gib den Kreisen Farben, aber nicht AI"): earthy, matte, one hue per metric ----
+   strain = rust, sleep = slate blue, protein = ochre, steps = olive; recovery uses the same olive / ochre / brick by level.
+   Cards, buttons and text stay ink and earth grey. */
+:root,:root[data-theme="dark"]{--ok:#3F7A34; --ok-soft:rgba(63,122,52,.12)}
+:root{--strain:#B4532A; --sleep:#4F6A80; --protein:#A57A2C; --steps:#5F7A4E; --rec-g:#5F7A4E; --rec-y:#B08326; --rec-r:#A8432F}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--strain:#E07A4F; --sleep:#8FA6BA; --protein:#D2A85A; --steps:#A3B98C; --rec-g:#A3B98C; --rec-y:#D9B05A; --rec-r:#E0705E; --ok:#9CC27F; --ok-soft:rgba(156,194,127,.14)}}
+:root[data-theme="dark"]{--strain:#E07A4F; --sleep:#8FA6BA; --protein:#D2A85A; --steps:#A3B98C; --rec-g:#A3B98C; --rec-y:#D9B05A; --rec-r:#E0705E; --ok:#9CC27F; --ok-soft:rgba(156,194,127,.14)}
+#syncPill.g{color:var(--ok);background:var(--ok-soft)}

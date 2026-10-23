@@ -379,9 +379,9 @@ function renderToday(){
   html += `<div class="spread"><span class="sec">${L("Body today","Körper heute")}</span><span class="small muted">${wc.done}/${wc.planned} ${L("sessions this week","Einheiten diese Woche")}</span></div>
   <div class="btiles">
     ${tile("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in below","Check in unten") : ({g:L("Green · train as planned","Grün · wie geplant"),y:L("Yellow · hold back a little","Gelb · etwas zurückhalten"),r:L("Red · recover","Rot · erholen")})[R.level]||"")}
-    ${tile("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--ink)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`Deep ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("no stages yet","noch keine Phasen"), stageBar(st0))}
-    ${tile("strain", L("Strain yesterday","Strain gestern"), yStrain!=null? yStrain/21 : 0, "var(--ink)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}`)}
-    <div class="btile"><span class="bt">${L("Protein","Protein")}</span><div class="rrow">${ring(prot/pt, "var(--ink)", 76, 8, `${prot}`, "", 19)}<span class="bs">/ ${pt} g</span></div>
+    ${tile("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`Deep ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("no stages yet","noch keine Phasen"), stageBar(st0))}
+    ${tile("strain", L("Strain yesterday","Strain gestern"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}`)}
+    <div class="btile"><span class="bt">${L("Protein","Protein")}</span><div class="rrow">${ring(prot/pt, "var(--protein)", 76, 8, `${prot}`, "", 19)}<span class="bs">/ ${pt} g</span></div>
       <div class="grid2" style="gap:6px">${[20,30,40].map(g=>`<button class="ghost" data-prot="${g}" style="min-height:34px;padding:4px 0;font-size:12px">+${g} g</button>`).join("")}<button class="ghost" data-prot="-10" aria-label="Remove 10 g" style="min-height:34px;padding:4px 0;font-size:12px">−10</button></div></div>
   </div>
   <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>

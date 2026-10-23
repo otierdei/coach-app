@@ -1,6 +1,6 @@
 /* Offline cache for the app shell. Data requests (Apps Script) always go to the network;
    the app itself keeps the last data in localStorage, so it opens offline with the last state. */
-const CACHE = "coach-v4";
+const CACHE = "coach-v5";
 
 /* Push from the coach push worker. Every push must show a notification, otherwise Safari may revoke the permission. */
 self.addEventListener("push", e => {
