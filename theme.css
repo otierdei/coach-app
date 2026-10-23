@@ -327,3 +327,17 @@ body.on-tasks{background:var(--bg)}
 .figmus{display:flex;align-items:center;gap:8px;font:600 14px/1.35 Inter,system-ui,sans-serif}
 .figmus .dot{width:10px;height:10px;border-radius:3px;background:#B4372A;flex-shrink:0}
 .figcues{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.45;color:var(--ink-2,var(--ink))}
+/* Today: every window folds to one line (app-11.js) */
+#v-today [data-fold]:not(details){position:relative}
+#v-today .fhd{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--muted);display:grid;place-items:center;z-index:1;cursor:pointer}
+#v-today .fhd svg{transform:rotate(180deg);transition:transform .2s}
+#v-today [data-fold]:not(.folded):not(details) > .fhd + *{padding-right:42px}
+#v-today .folded{padding:0!important;gap:0!important}
+#v-today .folded > :not(.fhd):not(.tfold){display:none!important}
+#v-today .folded > .fhd{position:static;width:100%;height:auto;min-height:54px;border-radius:inherit;background:none;color:var(--ink);display:flex;align-items:center;gap:10px;padding:0 16px;text-align:left;font:700 15px/1.2 var(--body,Inter,sans-serif)}
+#v-today .folded > .fhd svg{transform:none;margin-left:auto;flex-shrink:0;color:var(--muted)}
+#v-today .fhd .fht{white-space:nowrap;flex-shrink:0}
+#v-today .fhd .fhs{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px;color:var(--muted)}
+#v-today .fsec.folded{background:var(--card);border-radius:22px}
+#v-today .fall{min-height:32px;padding:4px 12px;font-size:13px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){#v-today .fhd svg{transition:none}}

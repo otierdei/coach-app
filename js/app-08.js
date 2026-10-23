@@ -99,7 +99,7 @@ function injectTodayTasks(){
   const cards = v.querySelectorAll(":scope > .card"); const tmp = document.createElement("div"); tmp.innerHTML = todayTasksCard(); const c = tmp.firstElementChild; if(!c) return;
   const slot = v.querySelector("[data-tk-slot]");
   if(slot) slot.replaceWith(c); else if(cards.length) cards[0].after(c); else v.appendChild(c);
-  bindTasks(v); tickClock();
+  bindTasks(v); tickClock(); if(typeof todayFold === "function") todayFold();
 }
 // api.js merged a write with a newer server copy: continue with the merged doc (never write the old copy again)
 window.addEventListener("coach:merged", e=>{ const {name, data} = e.detail||{};

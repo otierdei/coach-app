@@ -325,7 +325,7 @@ function renderToday(){
   const ySteps = health.days[yk]?.steps ?? null, yKcal = health.days[yk]?.kcal ?? null;
   const prot = lg.protein||0, pt = profile.proteinTarget;
   const blockTxt = w<1 ? `Block 1 starts ${fromKey(profile.blockStart).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}` : w>12 ? "Block complete" : `Week ${w}/12${DELOAD(w)?" · deload":""}`;
-  let html = `<div class="spread" style="padding:2px 2px 0"><div><div class="eyebrow">${DAY_NAMES[now.getDay()]} · ${now.toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</div><h2>Today</h2></div><span class="chip">${blockTxt}</span></div>`;
+  let html = `<div class="spread" style="padding:2px 2px 0"><div><div class="eyebrow">${DAY_NAMES[now.getDay()]} · ${now.toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</div><h2>Today</h2></div><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="chip">${blockTxt}</span><button type="button" class="ghost fall" id="foldAll"></button></div></div>`;
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
 
   // ---- hero: three dials, each explains itself on tap ----
@@ -341,6 +341,21 @@ function renderToday(){
   if(openDial==="sleep") why = sm ? `<p><b>${dur(sm)}</b> asleep, ${Math.round(sm/profile.asleepNeed*100)}% of your 7:30 need.${hk.onset!=null&&hk.wakeAt!=null?` Asleep ${fmt(hk.onset)}, awake ${fmt(hk.wakeAt)}.`:""}</p><p>Tonight: last coffee ${esc(profile.coffeeCutoff)}, lights out <b>${fmt(d.bed.bed)}</b> for ${dur(d.bed.inBed)} until ${fmt(d.bed.nextWake)}.</p>` : `<p>No sleep synced for last night. Log it below so recovery isn't blind.</p>`;
   const coachLine = R.ill ? `${R.ill.text}. Keep today very easy.` : R.score==null ? "No data for last night yet. Do the check in below." :
     isFast(now) ? `Fast day. Keep strain between ${tgt[0]} and ${tgt[1]}.` : `${({g:"Green. Your body can take load.",y:"Yellow. Train, but hold something back.",r:"Red. Recovery beats training today."})[R.level]} Strain target ${tgt[0]} to ${tgt[1]}.`;
+  // ---- body today: four tiles, tap one for the why ----
+  const st0 = stagesOf(health.days[k]);
+  // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
+  const tile = (id, title, pct, col, val, sub, extra) => `<button type="button" class="btile" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why"><span class="bt">${title}</span><div class="rrow">${ring(pct, col, 76, 8, val, "", 19)}</div>${extra||""}<span class="bs">${sub}</span></button>`;
+  const bsum = [R.score!=null?`${L("Recovery","Erholung")} ${R.score}%`:"", sm?`${L("Sleep","Schlaf")} ${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"", yStrain!=null?`Strain ${yStrain.toFixed(1)}`:"", `Protein ${prot}/${pt} g`].filter(Boolean).join(" · ");
+  html += `<section class="fsec" data-fold="body" data-ftitle="${L("Body today","Körper heute")}" data-fsum="${esc(bsum)}"><div class="spread"><span class="sec">${L("Body today","Körper heute")}</span><span class="small muted">${wc.done}/${wc.planned} ${L("sessions this week","Einheiten diese Woche")}</span></div>
+  <div class="btiles">
+    ${tile("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in below","Check in unten") : ({g:L("Green · train as planned","Grün · wie geplant"),y:L("Yellow · hold back a little","Gelb · etwas zurückhalten"),r:L("Red · recover","Rot · erholen")})[R.level]||"")}
+    ${tile("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`Deep ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("no stages yet","noch keine Phasen"), stageBar(st0))}
+    ${tile("strain", L("Strain yesterday","Strain gestern"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}`)}
+    <div class="btile"><span class="bt">${L("Protein","Protein")}</span><div class="rrow">${ring(prot/pt, "var(--protein)", 76, 8, `${prot}`, "", 19)}<span class="bs">/ ${pt} g</span></div>
+      <div class="grid2" style="gap:6px">${[20,30,40].map(g=>`<button class="ghost" data-prot="${g}" style="min-height:34px;padding:4px 0;font-size:12px">+${g} g</button>`).join("")}<button class="ghost" data-prot="-10" aria-label="Remove 10 g" style="min-height:34px;padding:4px 0;font-size:12px">−10</button></div></div>
+  </div>
+  <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>
+  <p class="small muted" style="padding:0 4px">${esc(coachLine)}</p></section>`;
   // ---- week strip (MCI style): tap a day for its calendar ----
   { const mon = mondayOf(now), P = weekPlan(mon);
     html += `<div class="wkstrip" role="group" aria-label="${L("This week","Diese Woche")}">${P.days.map(x=>`<span class="wd ${dateKey(x.date)===k?"now":""}">${SHORT[x.date.getDay()]}</span>`).join("")}
@@ -349,7 +364,7 @@ function renderToday(){
   // ---- morning briefing, read aloud on tap ----
   if(briefing && briefing.date===k){
     const lines = (briefing.lines && briefing.lines.length ? briefing.lines : String(briefing.text||"").split(/\n+/)).filter(Boolean);
-    html += `<div class="card brief"><div class="spread" style="flex-wrap:nowrap"><div style="min-width:0"><div class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</div><div class="small" data-notr style="margin-top:3px">${esc((lines[0]||"").replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</div></div>
+    html += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum="${esc((lines[0]||"").replace(/\[(Certain|Likely|Guessing)\]\s*/gi,"").slice(0,90))}"><div class="spread" style="flex-wrap:nowrap"><div style="min-width:0"><div class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</div><div class="small" data-notr style="margin-top:3px">${esc((lines[0]||"").replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</div></div>
       <button type="button" id="btnSpeak" class="primary play" aria-label="Read the briefing aloud">▶ Play</button></div>
       <details><summary class="small">Read it</summary><div class="lines" data-notr style="margin-top:8px">${lines.map(x=>`<p>${esc(x)}</p>`).join("")}</div></details>
       <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div>`;
@@ -362,7 +377,7 @@ function renderToday(){
     : s.def.formNote ? `<b>${esc(s.def.formNote)}</b>` : adj ? `<b>${esc(adj.t)}.</b> ${esc(adj.lines[0]||"")}` : (lg.fullPlan && (R.level==="y"||R.level==="r")) ? `<b>Full plan today, your choice.</b>` : "";
   const chgBtn = `<button type="button" class="ghost" id="btnTrain">${L("Change today's training","Training heute ändern")}</button>`;
   // fold (Oti 23.10.): the card can shrink to one line; remembered for the day on this device
-  let folded = false; try{ folded = localStorage.getItem("ohc-tfold")===k; }catch(e){}
+  const folded = foldGet("train");
   html += `<div class="card thero ${folded?"folded":""} ${s?`ty-${typeKey(s.def.type)}`:""}">
     <button type="button" class="tfold" id="tFold" aria-expanded="${!folded}" aria-label="${folded?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")}"><span class="tfl">${s? `${esc(s.def.name)} · ${fmt(s.start)} · ${loadDone}/${s.def.total}` : esc(d.conflict? L("No slot today","Heute kein Platz") : L("Rest day","Ruhetag"))}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
     <div class="spread tfull" style="flex-wrap:nowrap"><span class="eyebrow">${s?`${esc(s.def.type==="strength"?L("Strength","Kraft"):s.def.type==="run"?L("Run","Lauf"):s.def.type)} · ${fmt(s.start)} to ${fmt(s.end)}`:L("Today's training","Training heute")}</span>${s?`<span class="small">${L("Strain","Strain")} ≈ ${sessStrain.toFixed(0)}</span>`:""}</div>
@@ -375,26 +390,12 @@ function renderToday(){
     : `<p class="small">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>${chgBtn}`}</div>
   </div>`;
 
-  // ---- body today: four tiles, tap one for the why ----
-  const st0 = stagesOf(health.days[k]);
-  // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
-  const tile = (id, title, pct, col, val, sub, extra) => `<button type="button" class="btile" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why"><span class="bt">${title}</span><div class="rrow">${ring(pct, col, 76, 8, val, "", 19)}</div>${extra||""}<span class="bs">${sub}</span></button>`;
-  html += `<div class="spread"><span class="sec">${L("Body today","Körper heute")}</span><span class="small muted">${wc.done}/${wc.planned} ${L("sessions this week","Einheiten diese Woche")}</span></div>
-  <div class="btiles">
-    ${tile("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in below","Check in unten") : ({g:L("Green · train as planned","Grün · wie geplant"),y:L("Yellow · hold back a little","Gelb · etwas zurückhalten"),r:L("Red · recover","Rot · erholen")})[R.level]||"")}
-    ${tile("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`Deep ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("no stages yet","noch keine Phasen"), stageBar(st0))}
-    ${tile("strain", L("Strain yesterday","Strain gestern"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}`)}
-    <div class="btile"><span class="bt">${L("Protein","Protein")}</span><div class="rrow">${ring(prot/pt, "var(--protein)", 76, 8, `${prot}`, "", 19)}<span class="bs">/ ${pt} g</span></div>
-      <div class="grid2" style="gap:6px">${[20,30,40].map(g=>`<button class="ghost" data-prot="${g}" style="min-height:34px;padding:4px 0;font-size:12px">+${g} g</button>`).join("")}<button class="ghost" data-prot="-10" aria-label="Remove 10 g" style="min-height:34px;padding:4px 0;font-size:12px">−10</button></div></div>
-  </div>
-  <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>
-  <p class="small muted" style="padding:0 4px">${esc(coachLine)}</p>
-  <div data-tk-slot></div>`;
-  if(k >= (profile.creatineFrom||"9999")) html += `<div class="card" style="gap:6px"><div class="spread" style="flex-wrap:nowrap"><div><div style="font-weight:700">Creatine 5 g</div><div class="small muted">Daily with a meal or water, also on fast and rest days.</div></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="Creatine taken">${CHECK_SVG}</button></div></div>`;
+  html += `<div data-tk-slot></div>`;
+  if(k >= (profile.creatineFrom||"9999")) html += `<div class="card" style="gap:6px" data-fold="crea" data-ftitle="${L("Creatine 5 g","Kreatin 5 g")}" data-fsum="${lg.crea?L("taken ✓","genommen ✓"):L("open","offen")}"><div class="spread" style="flex-wrap:nowrap"><div><div style="font-weight:700">Creatine 5 g</div><div class="small muted">Daily with a meal or water, also on fast and rest days.</div></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="Creatine taken">${CHECK_SVG}</button></div></div>`;
   // ---- movement break in the middle of deep work ----
   { const mb = microBreak(d);
     if(mb){ const done = !!lg.mb, red = R.level==="r";
-      html += `<div class="card" style="gap:10px"><div class="spread" style="flex-wrap:nowrap"><div class="row" style="gap:12px;flex-wrap:nowrap;min-width:0">${tbadge("strength")}<div style="min-width:0"><div class="eyebrow">Movement break · ${fmt(mb.s)}</div><div style="font-weight:700">${esc(mb.reps)} ${esc(mb.name)}${red?` <span class="chip r" style="margin-left:4px">half today</span>`:""}</div></div></div>
+      html += `<div class="card" style="gap:10px" data-fold="mb" data-ftitle="${L("Movement break","Bewegungspause")} · ${fmt(mb.s)}" data-fsum="${done?L("done ✓","erledigt ✓"):esc(mb.reps+" "+mb.name)}"><div class="spread" style="flex-wrap:nowrap"><div class="row" style="gap:12px;flex-wrap:nowrap;min-width:0">${tbadge("strength")}<div style="min-width:0"><div class="eyebrow">Movement break · ${fmt(mb.s)}</div><div style="font-weight:700">${esc(mb.reps)} ${esc(mb.name)}${red?` <span class="chip r" style="margin-left:4px">half today</span>`:""}</div></div></div>
         <button type="button" class="check mbc ${done?"on":""}" id="mbCheck" aria-pressed="${done}" aria-label="Movement break done">${CHECK_SVG}</button></div>
         ${mb.why?`<p class="small muted">${esc(mb.why)}</p>`:""}</div>`; } }
 
@@ -435,7 +436,7 @@ function renderToday(){
   $("#v-train").hidden = !trainOpen; document.body.classList.toggle("training", trainOpen); { const w = $(".wrap"); if(w) w.inert = trainOpen; }
 
   // ---- morning: check in, journal, protein in one place ----
-  html += `<div class="card"><div class="spread"><h3>Morning</h3><span class="small muted">${lg.feel?"checked in ✓":"20 seconds"}</span></div>
+  html += `<div class="card" data-fold="morning" data-ftitle="${L("Morning check in","Morgen Check in")}" data-fsum="${lg.feel?L("checked in ✓","eingecheckt ✓"):L("open · 20 seconds","offen · 20 Sekunden")}"><div class="spread"><h3>Morning</h3><span class="small muted">${lg.feel?"checked in ✓":"20 seconds"}</span></div>
     <p class="small muted">${hk.sleepMin? "Sleep came in automatically. Add how you feel." : "No synced sleep for last night yet. Log it so recovery isn't blind."}</p>
     <div class="grid2"><label class="f" for="ciSleep">Hours slept<input id="ciSleep" type="number" inputmode="decimal" step="0.25" min="0" max="14" value="${lg.sleepH??""}" placeholder="${hk.sleepMin?(hk.sleepMin/60).toFixed(1):"7.5"}"></label>
     <label class="f" for="ciFeel">How you feel<select id="ciFeel"><option value="">Pick</option>${["1 · wrecked","2 · flat","3 · normal","4 · good","5 · great"].map((t,i)=>`<option value="${i+1}" ${lg.feel==i+1?"selected":""}>${t}</option>`).join("")}</select></label></div>
@@ -444,11 +445,11 @@ function renderToday(){
     <button id="btnCheckin" class="primary">Save check in</button></div>`;
 
   html += rhythmCardHtml();
-  html += `<details class="card"><summary>Your day</summary>
+  html += `<details class="card" data-fold="day"><summary>Your day</summary>
     ${allDayFor(now).length?`<div class="small muted">All day: ${allDayFor(now).map(esc).join(", ")}</div>`:""}
     ${dayCal(d,"today")}<span class="small muted">${calState.status==="ok"?"Calendar + template":"Template only"}</span></details>`;
   html += tomorrowCardHtml();
-  html += `<details class="card"><summary>Ask the coach</summary><p class="small muted">Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.</p>
+  html += `<details class="card" data-fold="coach"><summary>Ask the coach</summary><p class="small muted">Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.</p>
     <button id="btnCoach">Review my week</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
   $("#v-today").innerHTML = html;
 
@@ -456,7 +457,7 @@ function renderToday(){
   bindChecks("#v-train", defForKey);
   $("#btnTrain")?.addEventListener("click", ()=>openTraining());
   $("#tFold")?.addEventListener("click", ()=>{ const c = $("#tFold").closest(".thero"), f = !c.classList.contains("folded"); c.classList.toggle("folded", f);
-    $("#tFold").setAttribute("aria-expanded", String(!f)); $("#tFold").setAttribute("aria-label", f?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")); try{ if(f) localStorage.setItem("ohc-tfold", k); else localStorage.removeItem("ohc-tfold"); }catch(e){} });
+    $("#tFold").setAttribute("aria-expanded", String(!f)); $("#tFold").setAttribute("aria-label", f?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")); foldSet("train", f); foldBar(); });
   $("#trBack")?.addEventListener("click", ()=>closeTraining());
   $("#trDone")?.addEventListener("click", ()=>closeTraining());
   $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; else if(!L.form) L.form = recLevel(k);
