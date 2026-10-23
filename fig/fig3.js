@@ -110,7 +110,7 @@
   }
 
   function scene(el, w, h){
-    const R = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); R.setPixelRatio(Math.min(2, window.devicePixelRatio||1)); R.setSize(w, h);
+    const R = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:!!window.FIG3_KEEP}); R.setPixelRatio(Math.min(2, window.devicePixelRatio||1)); R.setSize(w, h);
     R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 1.05;
     el.appendChild(R.domElement);
     const S = new T.Scene(), C = new T.PerspectiveCamera(30, w/h, .05, 50);

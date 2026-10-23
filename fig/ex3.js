@@ -314,9 +314,9 @@
     const base = V(E.cam.p).sub(V(E.cam.l));
     const draw = (t, sway) => { place(F, poseAt(E, t)); E.after && E.after(F); const q = new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0), (sway||0)); C.position.copy(V(E.cam.l).add(base.clone().applyQuaternion(q))); C.lookAt(...E.cam.l); R.render(S, C); };
     let raf = 0, t0 = 0, run = false;
-    const loop = now => { if(!run) return; if(!t0) t0 = now; const per = E.seq ? 3600 : E.hold ? 5200 : 4000, ph = ((now - t0) % per)/per; draw(cycle(E, ph), Math.sin((now-t0)/per*2*Math.PI)*.18); raf = requestAnimationFrame(loop); };
+    const loop = now => { if(!run) return; if(!R.domElement.isConnected){ run = false; return; } if(!t0) t0 = now; const per = E.seq ? 3600 : E.hold ? 5200 : 4000, ph = ((now - t0) % per)/per; draw(cycle(E, ph), Math.sin((now-t0)/per*2*Math.PI)*.18); raf = requestAnimationFrame(loop); };
     draw(0, 0);
-    return { E, draw, play(){ if(run) return; run = true; t0 = 0; raf = requestAnimationFrame(loop); }, stop(){ run = false; cancelAnimationFrame(raf); },
+    return { E, draw, get running(){ return run; }, play(){ if(run) return; run = true; t0 = 0; raf = requestAnimationFrame(loop); }, stop(){ run = false; cancelAnimationFrame(raf); },
       dispose(){ run = false; cancelAnimationFrame(raf); R.dispose(); R.forceContextLoss(); F.g.dispose(); R.domElement.remove(); } };
   }
   const find = name => { const X = ex(); return Object.keys(X).find(k => X[k].re.test(name || "")); };
