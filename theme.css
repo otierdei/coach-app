@@ -235,8 +235,19 @@ body.on-tasks{background:var(--bg)}
   --hero:#211A15; --hero-muted:#BFB2A4;
 }}
 :root[data-theme="dark"]{--hero:#211A15; --hero-muted:#BFB2A4}
-.ptw,:root .ptw{--pw-prayer:var(--muted); --pw-fast:var(--muted); --pw-sol:var(--muted); --pw-comm:var(--muted); --pw-serv:var(--muted); --pw-other:var(--muted); --pw-done:var(--ink)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ptw{--pw-prayer:var(--muted); --pw-fast:var(--muted); --pw-sol:var(--muted); --pw-comm:var(--muted); --pw-serv:var(--muted); --pw-other:var(--muted); --pw-done:var(--ink)}}
+/* Life (Oti 23.10.): Practicing the Way colours back, but as nuances: muted practice tones, warm gold for the aim */
+.ptw,:root .ptw{--pw-prayer:#7F909A; --pw-fast:#5D6B74; --pw-sol:#56715F; --pw-comm:#8C5047; --pw-serv:#A6977F; --pw-other:#B89A4C; --pw-goal:#B98A43; --pw-done:#56715F}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ptw{--pw-prayer:#9AABB5; --pw-fast:#8C9CA7; --pw-sol:#7FA690; --pw-comm:#C27B6F; --pw-serv:#B9AD9C; --pw-other:#D6BC73; --pw-goal:#C79A52; --pw-done:#7FA690}}
+:root[data-theme="dark"] .ptw{--pw-prayer:#9AABB5; --pw-fast:#8C9CA7; --pw-sol:#7FA690; --pw-comm:#C27B6F; --pw-serv:#B9AD9C; --pw-other:#D6BC73; --pw-goal:#C79A52; --pw-done:#7FA690}
+.ptw .pw-goal{background:color-mix(in srgb,var(--pw-goal) 20%,var(--card));color:var(--ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pw-goal) 35%,transparent)}
+.ptw .pw-goal .i{color:var(--ink-2);opacity:1}
+.ptw .pw-trio .pw-mini:nth-child(1){--c:var(--pw-prayer)} .ptw .pw-trio .pw-mini:nth-child(2){--c:var(--pw-fast)} .ptw .pw-trio .pw-mini:nth-child(3){--c:var(--pw-sol)}
+.ptw .pw-mini{background:color-mix(in srgb,var(--c) 14%,var(--card))}
+.ptw .pw-mini .pw-freq{background:color-mix(in srgb,var(--c) 26%,var(--card));color:var(--ink)}
+.ptw .pw-row{border-left:3px solid color-mix(in srgb,var(--c) 70%,var(--card));background:color-mix(in srgb,var(--c) 6%,var(--card))}
+.ptw .pw-tag:not(.ghost):not(.cadence){background:color-mix(in srgb,var(--c) 26%,var(--card));color:var(--ink)}
+.ptw .pw-prac{border-color:color-mix(in srgb,var(--c) 30%,var(--line))}
+.ptw .pw-verse{border-left-color:color-mix(in srgb,var(--c,var(--pw-goal)) 70%,transparent)}
 .pw-tick[aria-pressed="true"] .box{color:var(--bg)}
 .tb{color:var(--ink);background:var(--card-2)}
 .btile .ring{margin:2px 0}
