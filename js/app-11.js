@@ -53,6 +53,8 @@ function foldTrain(v){
 }
 function todayFold(){
   const v = $("#v-today"); if(!v) return;
+  // days stay on top (Oti 23.10.): the "Next" line sits under the week strip
+  { const n = v.querySelector(":scope > .nextln"), w = v.querySelector(":scope > .wkstrip"); if(n && w && w.nextElementSibling !== n) w.after(n); }
   v.classList.add("fhost"); foldTag(v); foldAllEls(v).forEach(foldApply); foldTrain(v); foldBar(v);
 }
 // the other pages: cards get a key from their title
