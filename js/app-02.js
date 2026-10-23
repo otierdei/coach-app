@@ -361,15 +361,18 @@ function renderToday(){
     : isFast(now) ? `<b>Fast day.</b> Truly easy, HR under 145.` : (R.level==="y" && isFast(addDays(now,-1))) ? `<b>Yellow after a fast day is expected.</b> Train as planned, eat before the session.`
     : s.def.formNote ? `<b>${esc(s.def.formNote)}</b>` : adj ? `<b>${esc(adj.t)}.</b> ${esc(adj.lines[0]||"")}` : (lg.fullPlan && (R.level==="y"||R.level==="r")) ? `<b>Full plan today, your choice.</b>` : "";
   const chgBtn = `<button type="button" class="ghost" id="btnTrain">${L("Change today's training","Training heute ändern")}</button>`;
-  html += `<div class="card thero ${s?`ty-${typeKey(s.def.type)}`:""}">
-    <div class="spread" style="flex-wrap:nowrap"><span class="eyebrow">${s?`${esc(s.def.type==="strength"?L("Strength","Kraft"):s.def.type==="run"?L("Run","Lauf"):s.def.type)} · ${fmt(s.start)} to ${fmt(s.end)}`:L("Today's training","Training heute")}</span>${s?`<span class="small">${L("Strain","Strain")} ≈ ${sessStrain.toFixed(0)}</span>`:""}</div>
-    <div><h2>${s? esc(s.def.name) : d.conflict? L("No slot today","Heute kein Platz") : L("Rest day","Ruhetag")}</h2>${s?.def.sub?`<div class="small">${esc(s.def.sub)}${s.moved?` · moved from ${s.fromDay}`:""}${s.override?` · ${L("your change","deine Änderung")}`:""}</div>`:""}</div>
-    ${s?`<div class="tnums"><div><b>${Math.round(s.end - s.start)}</b><span>${L("minutes","Minuten")}</span></div><div><b>${exN}</b><span>${L("exercises","Übungen")}</span></div><div><b>${loadDone}/${s.def.total}</b><span>${L("sets","Sätze")}</span></div></div>
+  // fold (Oti 23.10.): the card can shrink to one line; remembered for the day on this device
+  let folded = false; try{ folded = localStorage.getItem("ohc-tfold")===k; }catch(e){}
+  html += `<div class="card thero ${folded?"folded":""} ${s?`ty-${typeKey(s.def.type)}`:""}">
+    <button type="button" class="tfold" id="tFold" aria-expanded="${!folded}" aria-label="${folded?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")}"><span class="tfl">${s? `${esc(s.def.name)} · ${fmt(s.start)} · ${loadDone}/${s.def.total}` : esc(d.conflict? L("No slot today","Heute kein Platz") : L("Rest day","Ruhetag"))}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="spread tfull" style="flex-wrap:nowrap"><span class="eyebrow">${s?`${esc(s.def.type==="strength"?L("Strength","Kraft"):s.def.type==="run"?L("Run","Lauf"):s.def.type)} · ${fmt(s.start)} to ${fmt(s.end)}`:L("Today's training","Training heute")}</span>${s?`<span class="small">${L("Strain","Strain")} ≈ ${sessStrain.toFixed(0)}</span>`:""}</div>
+    <div class="tfull"><h2>${s? esc(s.def.name) : d.conflict? L("No slot today","Heute kein Platz") : L("Rest day","Ruhetag")}</h2>${s?.def.sub?`<div class="small">${esc(s.def.sub)}${s.moved?` · moved from ${s.fromDay}`:""}${s.override?` · ${L("your change","deine Änderung")}`:""}</div>`:""}</div>
+    <div class="tfull tbody">${s?`<div class="tnums"><div><b>${Math.round(s.end - s.start)}</b><span>${L("minutes","Minuten")}</span></div><div><b>${exN}</b><span>${L("exercises","Übungen")}</span></div><div><b>${loadDone}/${s.def.total}</b><span>${L("sets","Sätze")}</span></div></div>
       ${heroNote ? `<div class="banner">${heroNote}</div>` : ""}
       <button type="button" class="bigbtn" id="btnTrain"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>${done0? L("Training done · open","Training erledigt · öffnen") : loadDone? L("Continue training","Training fortsetzen") : L("Start training","Training starten")}</button>`
     : d.conflict ? `<p class="small">The calendar left no room for ${esc(d.conflict)} today or on a flex day. Skip it rather than cramming it into a late night.</p>${chgBtn}`
     : isFast(now) ? `<p class="small">Fast day. No run planned: nothing refills your tank until dinner. Walk 30 to 45 min, keep coffee before ${esc(profile.coffeeCutoff)}.</p>${chgBtn}`
-    : `<p class="small">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>${chgBtn}`}
+    : `<p class="small">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>${chgBtn}`}</div>
   </div>`;
 
   // ---- body today: four tiles, tap one for the why ----
@@ -452,6 +455,8 @@ function renderToday(){
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); injectTodayTasks(); });
   bindChecks("#v-train", defForKey);
   $("#btnTrain")?.addEventListener("click", ()=>openTraining());
+  $("#tFold")?.addEventListener("click", ()=>{ const c = $("#tFold").closest(".thero"), f = !c.classList.contains("folded"); c.classList.toggle("folded", f);
+    $("#tFold").setAttribute("aria-expanded", String(!f)); $("#tFold").setAttribute("aria-label", f?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")); try{ if(f) localStorage.setItem("ohc-tfold", k); else localStorage.removeItem("ohc-tfold"); }catch(e){} });
   $("#trBack")?.addEventListener("click", ()=>closeTraining());
   $("#trDone")?.addEventListener("click", ()=>closeTraining());
   $("#btnFull")?.addEventListener("click", async ()=>{ const L = logData.days[k] = logData.days[k]||{}; if(L.fullPlan) delete L.fullPlan; else L.fullPlan = true; if(!Object.keys(L.sets||{}).length) delete L.form; else if(!L.form) L.form = recLevel(k);

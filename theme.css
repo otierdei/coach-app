@@ -254,3 +254,15 @@ body.on-tasks{background:var(--bg)}
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--strain:#E07A4F; --sleep:#8FA6BA; --protein:#D2A85A; --steps:#A3B98C; --rec-g:#A3B98C; --rec-y:#D9B05A; --rec-r:#E0705E; --ok:#9CC27F; --ok-soft:rgba(156,194,127,.14)}}
 :root[data-theme="dark"]{--strain:#E07A4F; --sleep:#8FA6BA; --protein:#D2A85A; --steps:#A3B98C; --rec-g:#A3B98C; --rec-y:#D9B05A; --rec-r:#E0705E; --ok:#9CC27F; --ok-soft:rgba(156,194,127,.14)}
 #syncPill.g{color:var(--ok);background:var(--ok-soft)}
+
+/* ---- training hero: fold to one line (Oti 23.10.) ---- */
+.thero{position:relative}
+.tfold{position:absolute;top:10px;right:10px;width:36px;height:36px;min-height:36px;padding:0;border-radius:999px;background:color-mix(in srgb,var(--hero-ink) 8%,transparent);color:var(--hero-ink);display:grid;place-items:center;z-index:1}
+.tfold svg{transform:rotate(180deg);transition:transform .2s}
+.tfold .tfl{display:none}
+.thero:not(.folded) .tfull.spread{padding-right:40px}
+.thero.folded{padding:0;gap:0}
+.thero.folded .tfull{display:none}
+.thero.folded .tfold{position:static;width:100%;height:auto;min-height:56px;border-radius:22px;background:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font:700 15px var(--body);text-align:left}
+.thero.folded .tfold .tfl{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thero.folded .tfold svg{transform:none}
