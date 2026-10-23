@@ -329,7 +329,7 @@ function renderToday(){
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
   // next thing today (Oti 23.10.): one line instead of reading the day plan
   { const nm = now.getHours()*60 + now.getMinutes(), hide = typeof WK_HIDE !== "undefined" ? WK_HIDE : /lunch|dinner|mittag|abendessen/i;
-    const cand = calEventsForDay(now).filter(e=>e.e > nm && !hide.test(e.t) && !/bewegungspause|movement break/i.test(e.t)).map(e=>({s:e.s, t:e.t, now:e.s<=nm}));
+    const cand = busyFor(now).filter(e=>e.e > nm && !e.cont && !hide.test(e.t) && !/lunch|dinner|break|pause/i.test(e.t)).map(e=>({s:e.s, t:e.t, now:e.s<=nm}));
     if(d.session && d.session.end > nm) cand.push({s:d.session.start, t:formDef(d.session.def, formLevel(k)).name, now:d.session.start<=nm, tr:true});
     cand.sort((a,b)=>a.s-b.s); const n = cand.find(x=>!x.now) || cand[0];
     html += `<button type="button" class="nextln" data-daycal="${k}"><span class="eyebrow">${n?(n.now?L("Now","Jetzt"):L("Next","Als Nächstes")):L("Today","Heute")}</span><span class="nt">${n?`${fmt(Math.max(n.s,0))} · ${esc(n.t)}`:L("Nothing more in the calendar","Nichts mehr im Kalender")}</span><span class="small muted">${L("Day plan","Tagesplan")} ›</span></button>`; }
