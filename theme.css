@@ -342,3 +342,6 @@ body.on-tasks{background:var(--bg)}
 #v-today .fall{min-height:32px;padding:4px 12px;font-size:13px;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){#v-today .fhd svg{transition:none}}
 #v-today .fsec:not(.folded) > .fhd{top:-6px;right:0}
+#v-today .btxt{all:unset;cursor:pointer;display:grid;gap:3px;min-width:0;flex:1;padding:4px 0}
+#v-today .btxt:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+#v-today .btxt .small{color:var(--muted);font-weight:600}

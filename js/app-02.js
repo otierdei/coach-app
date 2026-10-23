@@ -341,6 +341,11 @@ function renderToday(){
   if(openDial==="sleep") why = sm ? `<p><b>${dur(sm)}</b> asleep, ${Math.round(sm/profile.asleepNeed*100)}% of your 7:30 need.${hk.onset!=null&&hk.wakeAt!=null?` Asleep ${fmt(hk.onset)}, awake ${fmt(hk.wakeAt)}.`:""}</p><p>Tonight: last coffee ${esc(profile.coffeeCutoff)}, lights out <b>${fmt(d.bed.bed)}</b> for ${dur(d.bed.inBed)} until ${fmt(d.bed.nextWake)}.</p>` : `<p>No sleep synced for last night. Log it below so recovery isn't blind.</p>`;
   const coachLine = R.ill ? `${R.ill.text}. Keep today very easy.` : R.score==null ? "No data for last night yet. Do the check in below." :
     isFast(now) ? `Fast day. Keep strain between ${tgt[0]} and ${tgt[1]}.` : `${({g:"Green. Your body can take load.",y:"Yellow. Train, but hold something back.",r:"Red. Recovery beats training today."})[R.level]} Strain target ${tgt[0]} to ${tgt[1]}.`;
+  // ---- week strip (MCI style): tap a day for its calendar ----
+  { const mon = mondayOf(now), P = weekPlan(mon);
+    html += `<div class="wkstrip" role="group" aria-label="${L("This week","Diese Woche")}">${P.days.map(x=>`<span class="wd ${dateKey(x.date)===k?"now":""}">${SHORT[x.date.getDay()]}</span>`).join("")}
+      ${P.days.map(x=>{ const xk = dateKey(x.date), def = x.session?.def, dn = def && isDone(xk, def);
+        return `<button type="button" class="dy ${xk<k?"past":""} ${xk===k?"now":""} ${def?"tr":""} ${dn?"done":""}" data-daycal="${xk}" aria-label="${esc(x.date.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"}))}${def?` · ${esc(def.name)}`:""}"><b>${x.date.getDate()}</b><i></i></button>`; }).join("")}</div>`; }
   // ---- body today: four tiles, tap one for the why ----
   const st0 = stagesOf(health.days[k]);
   // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
@@ -356,18 +361,13 @@ function renderToday(){
   </div>
   <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div>
   <p class="small muted" style="padding:0 4px">${esc(coachLine)}</p></section>`;
-  // ---- week strip (MCI style): tap a day for its calendar ----
-  { const mon = mondayOf(now), P = weekPlan(mon);
-    html += `<div class="wkstrip" role="group" aria-label="${L("This week","Diese Woche")}">${P.days.map(x=>`<span class="wd ${dateKey(x.date)===k?"now":""}">${SHORT[x.date.getDay()]}</span>`).join("")}
-      ${P.days.map(x=>{ const xk = dateKey(x.date), def = x.session?.def, dn = def && isDone(xk, def);
-        return `<button type="button" class="dy ${xk<k?"past":""} ${xk===k?"now":""} ${def?"tr":""} ${dn?"done":""}" data-daycal="${xk}" aria-label="${esc(x.date.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"}))}${def?` · ${esc(def.name)}`:""}"><b>${x.date.getDate()}</b><i></i></button>`; }).join("")}</div>`; }
   // ---- morning briefing, read aloud on tap ----
   if(briefing && briefing.date===k){
     const lines = (briefing.lines && briefing.lines.length ? briefing.lines : String(briefing.text||"").split(/\n+/)).filter(Boolean);
-    html += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum="${esc((lines[0]||"").replace(/\[(Certain|Likely|Guessing)\]\s*/gi,"").slice(0,90))}"><div class="spread" style="flex-wrap:nowrap"><div style="min-width:0"><div class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</div><div class="small" data-notr style="margin-top:3px">${esc((lines[0]||"").replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</div></div>
+    html += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum=""><div class="spread" style="flex-wrap:nowrap"><button type="button" class="btxt" id="briefTxt" aria-expanded="false" aria-controls="briefBody"><span class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</span><span class="small">${L("Show text","Text zeigen")} ›</span></button>
       <button type="button" id="btnSpeak" class="primary play" aria-label="Read the briefing aloud">▶ Play</button></div>
-      <details><summary class="small">Read it</summary><div class="lines" data-notr style="margin-top:8px">${lines.map(x=>`<p>${esc(x)}</p>`).join("")}</div></details>
-      <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div>`;
+      <div id="briefBody" hidden><div class="lines" data-notr style="margin-top:4px">${lines.map(x=>`<p>${esc(x.replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</p>`).join("")}</div>
+      <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div></div>`;
   }
   // ---- today's training: one hero card, the session itself opens full screen ----
   const exN = s ? s.def.blocks.filter(b=>!b.skip).length : 0, done0 = s && isDone(k, s.def);
@@ -456,6 +456,7 @@ function renderToday(){
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); injectTodayTasks(); });
   bindChecks("#v-train", defForKey);
   $("#btnTrain")?.addEventListener("click", ()=>openTraining());
+  $("#briefTxt")?.addEventListener("click", ()=>{ const bb = $("#briefBody"), o = bb.hidden; bb.hidden = !o; $("#briefTxt").setAttribute("aria-expanded", String(o)); $("#briefTxt .small").textContent = o ? L("Hide text","Text ausblenden")+" ‹" : L("Show text","Text zeigen")+" ›"; });
   $("#tFold")?.addEventListener("click", ()=>{ const c = $("#tFold").closest(".thero"), f = !c.classList.contains("folded"); c.classList.toggle("folded", f);
     $("#tFold").setAttribute("aria-expanded", String(!f)); $("#tFold").setAttribute("aria-label", f?L("Show workout","Workout zeigen"):L("Fold workout","Workout zuklappen")); foldSet("train", f); foldBar(); });
   $("#trBack")?.addEventListener("click", ()=>closeTraining());
