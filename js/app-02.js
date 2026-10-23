@@ -327,6 +327,12 @@ function renderToday(){
   const blockTxt = w<1 ? `Block 1 starts ${fromKey(profile.blockStart).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}` : w>12 ? "Block complete" : `Week ${w}/12${DELOAD(w)?" · deload":""}`;
   let html = `<div class="spread" style="padding:2px 2px 0"><div><div class="eyebrow">${DAY_NAMES[now.getDay()]} · ${now.toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</div><h2>Today</h2></div><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="chip">${blockTxt}</span><button type="button" class="ghost fall" id="foldAll"></button></div></div>`;
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
+  // next thing today (Oti 23.10.): one line instead of reading the day plan
+  { const nm = now.getHours()*60 + now.getMinutes(), hide = typeof WK_HIDE !== "undefined" ? WK_HIDE : /lunch|dinner|mittag|abendessen/i;
+    const cand = calEventsForDay(now).filter(e=>e.e > nm && !hide.test(e.t) && !/bewegungspause|movement break/i.test(e.t)).map(e=>({s:e.s, t:e.t, now:e.s<=nm}));
+    if(d.session && d.session.end > nm) cand.push({s:d.session.start, t:formDef(d.session.def, formLevel(k)).name, now:d.session.start<=nm, tr:true});
+    cand.sort((a,b)=>a.s-b.s); const n = cand.find(x=>!x.now) || cand[0];
+    html += `<button type="button" class="nextln" data-daycal="${k}"><span class="eyebrow">${n?(n.now?L("Now","Jetzt"):L("Next","Als Nächstes")):L("Today","Heute")}</span><span class="nt">${n?`${fmt(Math.max(n.s,0))} · ${esc(n.t)}`:L("Nothing more in the calendar","Nichts mehr im Kalender")}</span><span class="small muted">${L("Day plan","Tagesplan")} ›</span></button>`; }
 
   // ---- hero: three dials, each explains itself on tap ----
   let why = "";
@@ -445,12 +451,7 @@ function renderToday(){
     <button id="btnCheckin" class="primary">Save check in</button></div>`;
 
   html += rhythmCardHtml();
-  html += `<details class="card" data-fold="day"><summary>Your day</summary>
-    ${allDayFor(now).length?`<div class="small muted">All day: ${allDayFor(now).map(esc).join(", ")}</div>`:""}
-    ${dayCal(d,"today")}<span class="small muted">${calState.status==="ok"?"Calendar + template":"Template only"}</span></details>`;
   html += tomorrowCardHtml();
-  html += `<details class="card" data-fold="coach"><summary>Ask the coach</summary><p class="small muted">Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.</p>
-    <button id="btnCoach">Review my week</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
   $("#v-today").innerHTML = html;
 
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); injectTodayTasks(); });
@@ -477,8 +478,6 @@ function renderToday(){
   $("#btnCheckin").onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.sleepH = Number($("#ciSleep").value)||null; L.feel = Number($("#ciFeel").value)||null;
     const Y = logData.days[yk] = logData.days[yk]||{}; Y.j = {}; document.querySelectorAll("#v-today .jbtn.on").forEach(b=>Y.j[b.dataset.j] = true);
     render(); await saveDoc("log", logData); };
-  const bc = $("#btnCoach");
-  bc.onclick = askCoach;
   const sp = $("#btnSpeak"); if(sp) sp.onclick = ()=>speakBriefing(sp);
   fillVoices();
   const mc = $("#mbCheck"); if(mc) mc.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.mb = !L.mb; const m = microBreak(d); if(L.mb && m) L.mbEx = m.g; render(); await saveDoc("log", logData); };

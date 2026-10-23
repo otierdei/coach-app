@@ -168,8 +168,8 @@ function spiritHtml(){
   const fruitKey = dateKey(mon), F = habits.fruit[fruitKey]||{};
   let h = `<div style="display:grid;gap:2px"><span class="pw-eye">${L("Rule of Life","Rule of Life")}</span><h2>${L("Life","Leben")}</h2></div>`;
   h += `<div class="pw-goalrow"><div class="pw-goal"><div class="g">${L("Becoming less selfish and irritable.","Weniger selbstbezogen und gereizt werden.")}</div>
-    <div class="i">${L("I am someone who ends the day with God and lives at an unhurried pace.","Ich bin jemand, der den Tag mit Gott beendet und in einem unhastigen Tempo lebt.")}</div></div>
-    <div class="pw-trio">${[["Daily","Täglich","Evening Rhythm","Abendrhythmus"],["Weekly","Wöchentlich","Thursday fast","Fasten am Donnerstag"],["Weekly","Wöchentlich","Sabbath, 12 hours","Sabbat, 12 Stunden"]].map(x=>`<div class="pw-mini"><span class="pw-freq">${L(x[0],x[1])}</span><span>${L(x[2],x[3])}</span></div>`).join("")}</div></div>`;
+    <div class="i">${L("I am someone who ends the day with God and lives at an unhurried pace.","Ich bin jemand, der den Tag mit Gott beendet und in einem unhastigen Tempo lebt.")}</div></div></div>`;
+
   // today
   const items = [];
   if(isEveningDay(now)) items.push(`<button type="button" class="pw-tick" data-hab="ev" aria-pressed="${!!H.ev}"><span class="t">${L("Evening Rhythm","Abendrhythmus")}<small>${L("Phone away","Handy weg um")} ${habits.evening.time}${habits.evening.latest?L(`, counts until ${habits.evening.latest}`,`, zählt bis ${habits.evening.latest}`):""}${dow===0?L(" · tonight: journal and rate your week"," · heute: Journal und Woche bewerten"):""}</small></span><span class="box">${CHECK_SVG}</span></button>`);
@@ -200,8 +200,12 @@ function spiritHtml(){
     ${verse("gal5","--pw-goal")}</div></details>`;
   // rule
   const rr = ruleRows();
-  h += `<details class="lmore"><summary><span>${L("Your Rule · practices","Deine Rule · Praktiken")}<small>${rr.map(r=>esc(L(r.h[0],r.h[1]))).join(" · ")}</small></span></summary><div class="lbody pw-rule">`;
-  for(const r of rr) h += `<div class="pw-row ${r.cls}"><div class="rh">${L(r.h[0],r.h[1])}</div><div class="rd">${L(r.d[0],r.d[1])}</div>${r.items.map(it=>`<div class="pw-prac"><div class="ph">${it.c}${it.tag}</div><div>${esc(L(it.t[0],it.t[1]))}</div>${it.extra||""}</div>`).join("")}</div>`;
+  h += `<details class="lmore"><summary><span>${L("Your Rule · practices","Deine Rule · Praktiken")}<small>${rr.map(r=>esc(L(r.h[0],r.h[1]))).join(" · ")}</small></span></summary><div class="lbody pw-rule">${`<div class="pw-trio">${[["Daily","Täglich","Evening Rhythm","Abendrhythmus"],["Weekly","Wöchentlich","Thursday fast","Fasten am Donnerstag"],["Weekly","Wöchentlich","Sabbath, 12 hours","Sabbat, 12 Stunden"]].map(x=>`<div class="pw-mini"><span class="pw-freq">${L(x[0],x[1])}</span><span>${L(x[2],x[3])}</span></div>`).join("")}</div>`}`;
+  // one line per practice (Oti 23.10.): name, rhythm, status; the text opens on tap
+  const short = t => { const c = t.indexOf(":"); if(c > 0 && c < 38) return t.slice(0, c); const w = t.split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? " …" : ""); };
+  const stat = it => /aria-pressed="true"/.test(it.extra||"") ? `<span class="pw-st on">✓</span>` : /data-prompt/.test(it.extra||"") ? `<span class="pw-st">${L("open","offen")}</span>` : "";
+  for(const r of rr) h += `<details class="pw-row ${r.cls}"><summary><span class="rh">${L(r.h[0],r.h[1])}</span><span class="rn">${r.items.length} ${r.items.length===1?L("practice","Praxis"):L("practices","Praktiken")}</span></summary><div class="rd">${L(r.d[0],r.d[1])}</div>${r.items.map(it=>{ const t = L(it.t[0],it.t[1]);
+    return `<details class="pw-prac"><summary><span class="ph">${it.c}</span><span class="pn">${esc(short(t))}</span>${stat(it)}</summary><div class="pt">${esc(t)}</div><div class="ph">${it.tag}</div>${it.extra||""}</details>`; }).join("")}</details>`;
   h += `</div></details>`;
   // prayers
   h += `<details class="lmore" id="lmPray"><summary><span>${L("Pray","Beten")}<small>${PRAYERS.length} ${L("guided prayers","geführte Gebete")}</small></span></summary><div class="lbody">`;

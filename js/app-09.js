@@ -96,7 +96,11 @@ function renderWeek(){
   const hours = [8,10,12,14,16,18,20,22].map(h=>`<span style="top:${top(h*60)}">${h}:00</span>`).join("");
   const timeline = `<div class="wktl"><div class="tlhours"><div class="tlh"></div><div class="tlad"></div><div class="tlg">${hours}</div></div>${cols}</div>`;
 
-  $("#v-week").innerHTML = head + `<div class="wkagenda">${agenda}</div>` + timeline;
+  // "Ask the coach" moved here from Today (Oti 23.10.): it reviews the week
+  const coach = `<details class="card" data-fold="coach"><summary>${L("Ask the coach","Coach fragen")}</summary><p class="small muted">${L("Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.","Schickt dein Profil, die letzten 14 Tage und den Wochenplan an Claude für eine ehrliche Bewertung. Nutzt dein Claude Kontingent.")}</p>
+    <button id="btnCoach">${L("Review my week","Meine Woche bewerten")}</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
+  $("#v-week").innerHTML = head + `<div class="wkagenda">${agenda}</div>` + timeline + coach;
+  { const bc = $("#btnCoach"); if(bc) bc.onclick = askCoach; }
   const v = $("#v-week");
   $("#wkPrev").onclick = ()=>{weekOffset--;render();}; $("#wkNext").onclick = ()=>{weekOffset++;render();}; const wn = $("#wkNow"); if(wn) wn.onclick = ()=>{weekOffset=0;render();};
   $("#wkAdd").onclick = ()=>openEventSheet(null, {date: weekOffset ? dateKey(mon) : today});

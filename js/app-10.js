@@ -1,6 +1,6 @@
 /* Exercise figures in the training view: a small moving 3D figure instead of a YouTube search.
    three.js, the body and the exercises load on the first tap only (fig/). */
-const FIG_V = "20261023j";
+const FIG_V = "20261023k";
 const FIG_RE = [[/pull ups/i,"pullup"],[/chin ups/i,"chinup"],[/hanging knee/i,"kneeraise"],[/false grip/i,"falsegrip"],[/^dips/i,"dips"],
   [/archer push/i,"archer"],[/decline push/i,"decline"],[/pike push/i,"pike"],[/^push ups/i,"pushup"],[/hollow/i,"hollow"],[/bulgarian/i,"bulgarian"],
   [/pistol/i,"pistol"],[/nordic/i,"nordic"],[/copenhagen/i,"copenhagen"],[/broad jump/i,"broad"],[/hammer curl/i,"hammer"],[/db curls|dumbbell curl|^curls/i,"curl"],

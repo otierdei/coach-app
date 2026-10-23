@@ -339,20 +339,48 @@ body.on-tasks{background:var(--bg)}
 .figmus .dot{width:10px;height:10px;border-radius:3px;background:#B4372A;flex-shrink:0}
 .figcues{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.45;color:var(--ink-2,var(--ink))}
 /* Today: every window folds to one line (app-11.js) */
-#v-today [data-fold]:not(details){position:relative}
-#v-today .fhd{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--muted);display:grid;place-items:center;z-index:1;cursor:pointer}
-#v-today .fhd svg{transform:rotate(180deg);transition:transform .2s}
-#v-today [data-fold]:not(.folded):not(details) > .fhd + *{padding-right:42px}
-#v-today .folded{padding:0!important;gap:0!important}
-#v-today .folded > :not(.fhd):not(.tfold){display:none!important}
-#v-today .folded > .fhd{position:static;width:100%;height:auto;min-height:54px;border-radius:inherit;background:none;color:var(--ink);display:flex;align-items:center;gap:10px;padding:0 16px;text-align:left;font:700 15px/1.2 var(--body,Inter,sans-serif)}
-#v-today .folded > .fhd svg{transform:none;margin-left:auto;flex-shrink:0;color:var(--muted)}
-#v-today .fhd .fht{white-space:nowrap;flex-shrink:0}
-#v-today .fhd .fhs{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px;color:var(--muted)}
-#v-today .fsec.folded{background:var(--card);border-radius:22px}
-#v-today .fall{min-height:32px;padding:4px 12px;font-size:13px;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){#v-today .fhd svg{transition:none}}
-#v-today .fsec:not(.folded) > .fhd{top:-6px;right:0}
+.fhost [data-fold]:not(details){position:relative}
+.fhost .fhd{position:absolute;top:10px;right:10px;width:34px;height:34px;min-height:34px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--muted);display:grid;place-items:center;z-index:1;cursor:pointer}
+.fhost .fhd svg{transform:rotate(180deg);transition:transform .2s}
+.fhost [data-fold]:not(.folded):not(details) > .fhd + *{padding-right:42px}
+.fhost .folded{padding:0!important;gap:0!important}
+.fhost .folded > :not(.fhd):not(.tfold){display:none!important}
+.fhost .folded > .fhd{position:static;width:100%;height:auto;min-height:54px;border-radius:inherit;background:none;color:var(--ink);display:flex;align-items:center;gap:10px;padding:0 16px;text-align:left;font:700 15px/1.2 var(--body,Inter,sans-serif)}
+.fhost .folded > .fhd svg{transform:none;margin-left:auto;flex-shrink:0;color:var(--muted)}
+.fhost .fhd .fht{white-space:nowrap;flex-shrink:0}
+.fhost .fhd .fhs{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px;color:var(--muted)}
+.fhost .fsec.folded{background:var(--card);border-radius:22px}
+.fhost .fall{min-height:32px;padding:4px 12px;font-size:13px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.fhost .fhd svg{transition:none}}
+.fhost .fsec:not(.folded) > .fhd{top:-6px;right:0}
 #v-today .btxt{all:unset;cursor:pointer;display:grid;gap:3px;min-width:0;flex:1;padding:4px 0}
 #v-today .btxt:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
 #v-today .btxt .small{color:var(--muted);font-weight:600}
+
+.fallbar{display:flex;justify-content:flex-end;margin-bottom:-4px}
+.fhost .folded.pw-card,.fhost .folded.card{min-height:0}
+#v-today .nextln{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;background:var(--card);border-radius:18px;padding:12px 16px;min-height:52px}
+#v-today .nextln .nt{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#v-today .nextln:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ptw .pw-row{border-left:0}
+/* Rule: one line per practice (Oti 23.10.) */
+.ptw details.pw-row{display:block;padding:0 14px}
+.ptw details.pw-row > summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:54px;cursor:pointer}
+.ptw details.pw-row > summary::-webkit-details-marker,.ptw details.pw-prac > summary::-webkit-details-marker{display:none}
+.ptw details.pw-row > summary .rh{flex:1;font-size:16px}
+.ptw details.pw-row > summary .rn{font-size:12.5px;color:var(--pw-muted)}
+.ptw details.pw-row > summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--pw-muted);border-bottom:2px solid var(--pw-muted);transform:rotate(45deg);margin:0 4px 4px}
+.ptw details.pw-row[open] > summary::after{transform:rotate(-135deg);margin-bottom:-4px}
+.ptw details.pw-row[open]{padding-bottom:12px}
+.ptw details.pw-row > .rd{margin:0 0 10px}
+.ptw details.pw-prac{display:block;padding:0 12px;margin-top:8px}
+.ptw details.pw-prac > summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:46px;cursor:pointer}
+.ptw details.pw-prac > summary .ph{flex:none}
+.ptw details.pw-prac > summary .pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.ptw details.pw-prac[open] > summary .pn{white-space:normal}
+.ptw .pw-st{font-size:12px;color:var(--pw-muted);flex:none}
+.ptw .pw-st.on{color:var(--pw-done);font-weight:700}
+.ptw details.pw-prac > .pt{padding:0 0 8px;line-height:1.45}
+.ptw details.pw-prac > .ph{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:8px}
+.ptw details.pw-prac > .pa{padding-bottom:10px}
+.ptw .pw-rule > .pw-trio{margin-bottom:4px}
