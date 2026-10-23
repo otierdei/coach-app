@@ -244,10 +244,11 @@ function calendars_() {
 function events_(calendarId, startTime, endTime) {
   var cal = (!calendarId || calendarId === 'primary') ? CalendarApp.getDefaultCalendar() : CalendarApp.getCalendarById(calendarId);
   if (!cal) throw new Error('calendar not found: ' + calendarId);
-  var evs = cal.getEvents(new Date(startTime), new Date(endTime));
+  var evs = cal.getEvents(new Date(startTime), new Date(endTime)), isMain = cal.getId() === CalendarApp.getDefaultCalendar().getId();
   return evs.map(function (ev) {
     var o = {id: ev.getId(), summary: ev.getTitle(), description: ev.getDescription(), status: 'confirmed', location: ev.getLocation(),
-      recurring: ev.isRecurringEvent(), writable: cal.getId() === CalendarApp.getDefaultCalendar().getId() && !ev.isRecurringEvent()};
+      recurring: false, writable: false};
+    o.recurring = ev.isRecurringEvent(); o.writable = isMain && !o.recurring && ev.isOwnedByMe();
     if (ev.isAllDayEvent()) {
       o.start = {date: Utilities.formatDate(ev.getAllDayStartDate(), TZ, 'yyyy-MM-dd')};
       o.end = {date: Utilities.formatDate(ev.getAllDayEndDate(), TZ, 'yyyy-MM-dd')};
@@ -283,6 +284,7 @@ function findEvent_(id, at) {
   if (!ev) ev = cal.getEventById(id);
   if (!ev) throw new Error('event not found');
   if (ev.isRecurringEvent()) throw new Error('recurring events are changed in Google Calendar');
+  if (!ev.isOwnedByMe()) throw new Error('events from other people are changed in Google Calendar');
   return ev;
 }
 function createEvent_(e) {
@@ -304,7 +306,8 @@ function updateEvent_(id, at, e) {
   if (e.location != null) ev.setLocation(e.location);
   if (e.description != null) ev.setDescription(e.description);
   if (e.start) {
-    if (e.allDay) ev.setAllDayDate(parseLocal_(e.start));
+    if (e.allDay) { var as = parseLocal_(e.start), ae = e.end ? parseLocal_(e.end) : null;
+      if (ae && ae.getTime() > as.getTime() + 864e5) ev.setAllDayDates(as, ae); else ev.setAllDayDate(as); }
     else { var st = parseLocal_(e.start), end = e.end ? parseLocal_(e.end) : new Date(st.getTime() + (ev.getEndTime() - ev.getStartTime())); if (end <= st) throw new Error('end before start'); ev.setTime(st, end); }
   }
   return shape_(ev);

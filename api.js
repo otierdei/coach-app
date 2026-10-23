@@ -276,7 +276,16 @@
     if(l) l.onclick = async ()=>{ const ok = await copy(connectLink()); document.getElementById("apiMsg").textContent = ok ? "Link copied. Send it to your iPhone (AirDrop or Notes) and open it in Safari once." : connectLink(); };
   }
 
-  window.API = {db, mcp, sample, openCoach, coachUrl, configured, setupCard, bindSetup, call, flushPending,
+  /* ---------- calendar writing (23.10.2026, Week tab): main Google calendar, single events only ---------- */
+  const cal = {
+    create: ev => call("createEvent", {event: ev}).then(r=>r.event),
+    update: (id, at, ev) => call("updateEvent", {id, at, event: ev}).then(r=>r.event),
+    remove: (id, at) => call("deleteEvent", {id, at}).then(r=>r.deleted)
+  };
+  // assistant: one sentence -> calendar proposal; Claude runs on the push worker, the API key never reaches the app
+  const assist = (text, events) => pushCall("/assistant", {key: cfg.key, text, now: new Date().toString(), events});
+
+  window.API = {db, mcp, sample, openCoach, coachUrl, configured, setupCard, bindSetup, call, flushPending, cal, assist,
     push: {subscribe: pushSubscribe, test: ()=>pushTest(), status: ()=>pushStatus(), url: PUSH_URL},
     status: ()=>({configured: configured(), online, pending: Object.keys(pending).length, lastErr}), DOCS};
 })();

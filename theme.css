@@ -266,3 +266,56 @@ body.on-tasks{background:var(--bg)}
 .thero.folded .tfold{position:static;width:100%;height:auto;min-height:56px;border-radius:22px;background:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font:700 15px var(--body);text-align:left}
 .thero.folded .tfold .tfl{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thero.folded .tfold svg{transform:none}
+
+/* ---- Week (23.10.2026): iPhone agenda with days that open, Mac time line ---- */
+.wkacts{gap:8px}
+.wkacts button{min-height:38px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px}
+.wkstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.wkstats>div{background:var(--card);border-radius:16px;padding:10px 12px;display:grid;gap:1px}
+.wkstats b{font:800 18px var(--display)} .wkstats b small{font:600 12px var(--body);color:var(--muted)}
+.wkstats span{font-size:11px;color:var(--muted)}
+.wkagenda{display:grid;gap:8px}
+.wkday{background:var(--card);border-radius:20px}
+.wkday.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.wkday>summary{list-style:none;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;cursor:pointer}
+.wkday>summary::-webkit-details-marker{display:none}
+.wkday.past>summary{opacity:.72}
+.wkday .wd{display:grid;justify-items:center;line-height:1.05}
+.wkday .wd small{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.wkday .wd b{font:800 22px var(--display)}
+.wkday.today .wd b{color:var(--accent-ink)}
+.wkday .wm{display:grid;gap:2px;min-width:0}
+.wkday .wtr{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wkday .wtr.done{color:var(--rec-g)} .wkday .wtr.off{color:var(--muted);font-weight:600}
+.wkday .wsub{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wkday .wtag{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+.wkday[open] .wsub{display:none}
+.wkbody{display:grid;gap:4px;padding:0 10px 14px 60px}
+.wkrow{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:8px;align-items:start;text-align:left;background:transparent;border-radius:12px;padding:8px 8px;min-height:44px;font-weight:500;color:var(--ink)}
+.wkrow:not(.static):hover{background:var(--card-2)}
+.wkrow .wt{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:1px}
+.wkrow .wn{display:grid;gap:1px;font-size:14px;font-weight:600;min-width:0}
+.wkrow .wn small{font-size:12px;font-weight:500;color:var(--muted)}
+.wkrow .wr{color:var(--muted);font-size:13px}
+.wkrow.k-train .wn{color:var(--accent-ink)} .wkrow.k-sleep .wn{color:var(--sleep);font-weight:500}
+.wkadd{justify-self:start;min-height:38px;padding:6px 12px;font-size:13px;margin-top:4px}
+.wktl{display:none}
+@media (min-width: 1000px){
+  .wkagenda{display:none}
+  #v-week{grid-template-columns:1fr!important}
+  #v-week > *{grid-column:1/-1}
+  .wktl{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));gap:6px;background:var(--card);border-radius:22px;padding:12px;min-height:680px}
+  .tlc,.tlhours{display:grid;grid-template-rows:36px auto 1fr;gap:4px;min-width:0}
+  .tlh{display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:var(--muted);border-radius:12px}
+  .tlc.today .tlh{color:var(--ink);box-shadow:inset 0 0 0 2px var(--accent)}
+  .tlad{display:grid;gap:3px;min-height:4px}
+  .tla{min-height:24px;padding:3px 8px;border-radius:8px;font-size:11px;background:var(--card-2);color:var(--ink);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tlg{position:relative;min-height:620px;border-radius:12px;background:color-mix(in srgb,var(--bg) 40%,var(--card))}
+  .tlc.today .tlg{background:color-mix(in srgb,var(--accent) 5%,var(--card))}
+  .tlhours .tlg{background:none} .tlhours .tlg span{position:absolute;right:4px;transform:translateY(-50%);font-size:10px;color:var(--muted)}
+  .tlb{position:absolute;left:3px;right:3px;min-height:0;padding:4px 6px;border-radius:8px;font:600 11px/1.2 var(--body);text-align:left;overflow:hidden;background:var(--card-3);color:var(--ink-2)}
+  .tlb.k-lesson{background:color-mix(in srgb,var(--ink) 22%,var(--card))} .tlb.k-meet{background:color-mix(in srgb,var(--ink) 34%,var(--card));color:var(--ink)}
+  .tlb.k-church{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted);color:var(--ink-2)}
+  .tlb.k-train{background:var(--accent);color:var(--on-accent);z-index:1} .tlb.k-train.done{background:color-mix(in srgb,var(--accent) 45%,var(--card));color:var(--ink)}
+}
+@media (min-width: 1000px){ .tlb.cont{opacity:.45;box-shadow:inset 0 0 0 1px var(--line);background:transparent} }
