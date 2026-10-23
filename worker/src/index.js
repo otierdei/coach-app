@@ -145,9 +145,11 @@ async function doAssist(env, body) {
   if ((out.action === "update" || out.action === "delete") && !events.some(e => e.id === out.id && !e.recurring)) {
     const rec = events.some(e => e.id === out.id && e.recurring);
     out.action = "none"; out.reply = rec ? "Das ist ein Serientermin. Den änderst du bitte direkt in Google Kalender." : "Welchen Termin meinst du genau?"; }
+  if (/ganzt[äa]gig|den ganzen tag|all day/i.test(text)) out.allDay = true;
+  if (out.action === "create" || out.action === "update") out.reply = "Bitte prüfen und dann speichern.";
   await log(env, "assist", out.action, 0, 0, 0, text.slice(0, 200));
   const clean = v => { const m = String(v || "").match(/^(\d{4}-\d{2}-\d{2})(T\d{2}:\d{2})?/); return m ? m[1] + (m[2] || "") : ""; };
-  const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: clean(out.start), end: clean(out.end), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
+  const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: out.allDay ? clean(out.start).slice(0, 10) : clean(out.start), end: out.allDay ? (clean(out.end) || clean(out.start)).slice(0, 10) : clean(out.end), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
   return { ok: true, action: out.action, id: out.id || null, event: ev, reply: String(out.reply || "").slice(0, 300) };
 }
 
