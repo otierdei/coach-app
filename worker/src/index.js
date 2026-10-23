@@ -79,8 +79,22 @@ const ASSIST_TOOL = {
     reply: { type: "string", description: "one short sentence in the language Oti used, saying what will happen or what is missing" }
   }, required: ["action", "reply"] }
 };
+const ASSIST_CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+const ASSIST_SCHEMA = { type: "object", properties: {
+  action: { type: "string", enum: ["create", "update", "delete", "none"] }, id: { type: "string" }, title: { type: "string" },
+  start: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all day" }, end: { type: "string" },
+  allDay: { type: "boolean" }, location: { type: "string" }, reply: { type: "string", description: "one short German sentence for Oti" } },
+  required: ["action", "reply"] };
+// the next 15 days in Berlin time, so the model does not have to do date maths
+function dayTable() {
+  const f = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" });
+  const out = [];
+  for (let i = 0; i < 15; i++) { const d = new Date(Date.now() + i * 864e5); const p = Object.fromEntries(f.formatToParts(d).map(x => [x.type, x.value]));
+    out.push(`${i === 0 ? "heute" : i === 1 ? "morgen" : i === 2 ? "übermorgen" : ""} ${p.weekday} = ${p.year}-${p.month}-${p.day}`.trim()); }
+  return out.join("\n");
+}
 async function doAssist(env, body) {
-  if (!env.ANTHROPIC_API_KEY) return { ok: false, error: "assistant not set up", code: "no_api_key" };
+  if (!env.AI && !env.ANTHROPIC_API_KEY) return { ok: false, error: "assistant not set up", code: "no_api_key" };
   const text = String(body.text || "").trim().slice(0, 600);
   if (!text) return { ok: false, error: "empty" };
   const day = new Date().toISOString().slice(0, 10);
@@ -88,19 +102,34 @@ async function doAssist(env, body) {
   if (used && used.n >= MAX_ASSIST_PER_DAY) return { ok: false, error: "daily assistant limit reached" };
   const events = (Array.isArray(body.events) ? body.events : []).slice(0, 80).map(e => ({ id: String(e.id || "").slice(0, 200), title: String(e.title || "").slice(0, 120), start: String(e.start || "").slice(0, 25), end: String(e.end || "").slice(0, 25), recurring: !!e.recurring }));
   const sys = "You turn one sentence from Oti into exactly one change to his Google calendar. Time zone Europe/Berlin. " +
-    "Now: " + String(body.now || new Date().toISOString()).slice(0, 40) + ". Default length 60 minutes if no end is given. " +
-    "Relative dates (morgen, übermorgen, nächsten Freitag) are resolved from now. For update or delete use only an id from the event list and never a recurring event. " +
-    "If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Always call the tool.";
-  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
-    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: ASSIST_MODEL, max_tokens: 400, system: sys, tools: [ASSIST_TOOL], tool_choice: { type: "tool", name: "calendar_change" },
-      messages: [{ role: "user", content: "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text }] }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) { await log(env, "assist", "error", 0, 0, 0, (j && j.error && j.error.message) || r.status); return { ok: false, error: "assistant error " + r.status }; }
-  const use = (j.content || []).find(c => c.type === "tool_use");
-  const out = use ? use.input : { action: "none", reply: "Ich habe das nicht verstanden." };
+    "Now: " + String(body.now || new Date().toISOString()).slice(0, 40) + ".\nDates:\n" + dayTable() + "\nDefault length 60 minutes if no end is given. " +
+    "Use the date table for relative dates (morgen, übermorgen, nächsten Freitag). For update or delete use only an id from the event list and never a recurring event. " +
+    "If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Answer only with JSON.";
+  const user = "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text;
+  let out = null, err = null;
+  if (env.AI) {
+    try {
+      const r = await env.AI.run(ASSIST_CF_MODEL, { messages: [{ role: "system", content: sys }, { role: "user", content: user }], max_tokens: 300, temperature: 0.1,
+        response_format: { type: "json_schema", json_schema: ASSIST_SCHEMA } });
+      const raw = r && r.response;
+      out = typeof raw === "string" ? JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)) : raw;
+    } catch (e) { err = String(e && e.message || e).slice(0, 200); }
+  }
+  if (!out && env.ANTHROPIC_API_KEY) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+      headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: ASSIST_MODEL, max_tokens: 400, system: sys, tools: [ASSIST_TOOL], tool_choice: { type: "tool", name: "calendar_change" },
+        messages: [{ role: "user", content: user }] }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) err = (j && j.error && j.error.message) || String(r.status);
+    else { const use = (j.content || []).find(c => c.type === "tool_use"); if (use) out = use.input; }
+  }
+  if (!out) { await log(env, "assist", "error", 0, 0, 0, err || "no answer"); return { ok: false, error: "assistant error" }; }
+  if (!["create", "update", "delete", "none"].includes(out.action)) out.action = "none";
+  // only ids that were really in the list
+  if ((out.action === "update" || out.action === "delete") && !events.some(e => e.id === out.id && !e.recurring)) { out.action = "none"; out.reply = out.reply || "Welchen Termin meinst du?"; }
   await log(env, "assist", out.action, 0, 0, 0, text.slice(0, 200));
-  const ev = out.action === "create" || out.action === "update" ? { title: out.title || "", start: out.start || "", end: out.end || "", allDay: !!out.allDay, location: out.location || "" } : undefined;
+  const ev = out.action === "create" || out.action === "update" ? { title: String(out.title || ""), start: String(out.start || ""), end: String(out.end || ""), allDay: !!out.allDay, location: String(out.location || "") } : undefined;
   return { ok: true, action: out.action, id: out.id || null, event: ev, reply: String(out.reply || "").slice(0, 300) };
 }
 
