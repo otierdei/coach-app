@@ -1,7 +1,8 @@
 /**
  * Coach App backend (Google Apps Script web app).
  * Lives in Oti's own Google account. Reads and writes the JSON files in the Drive folder "Coach Data",
- * lists Google Calendar events and reads the health files in the Drive folder "Oti Health" (read only).
+ * lists Google Calendar events, creates, changes and deletes single events in the main calendar (23.10.2026: Week tab),
+ * and reads the health files in the Drive folder "Oti Health" (read only).
  *
  * One time setup:
  *   1. Paste this file into a new Apps Script project (script.new), save.
@@ -72,6 +73,9 @@ function doPost(e) {
       case 'write': return json_(writeDoc_(req.doc, req.data, req.baseVersion));
       case 'calendars': return json_({ok: true, calendars: calendars_()});
       case 'events': return json_({ok: true, events: events_(req.calendarId, req.startTime, req.endTime)});
+      case 'createEvent': return json_({ok: true, event: createEvent_(req.event)});
+      case 'updateEvent': return json_({ok: true, event: updateEvent_(req.id, req.at, req.event)});
+      case 'deleteEvent': return json_({ok: true, deleted: deleteEvent_(req.id, req.at)});
       case 'driveSearch': return json_({ok: true, files: driveSearch_(req.query, req.pageSize)});
       case 'driveDownload': return json_({ok: true, content: driveDownload_(req.fileId)});
       default: return json_({error: 'unknown action'});
@@ -242,7 +246,8 @@ function events_(calendarId, startTime, endTime) {
   if (!cal) throw new Error('calendar not found: ' + calendarId);
   var evs = cal.getEvents(new Date(startTime), new Date(endTime));
   return evs.map(function (ev) {
-    var o = {id: ev.getId(), summary: ev.getTitle(), description: ev.getDescription(), status: 'confirmed', location: ev.getLocation()};
+    var o = {id: ev.getId(), summary: ev.getTitle(), description: ev.getDescription(), status: 'confirmed', location: ev.getLocation(),
+      recurring: ev.isRecurringEvent(), writable: cal.getId() === CalendarApp.getDefaultCalendar().getId() && !ev.isRecurringEvent()};
     if (ev.isAllDayEvent()) {
       o.start = {date: Utilities.formatDate(ev.getAllDayStartDate(), TZ, 'yyyy-MM-dd')};
       o.end = {date: Utilities.formatDate(ev.getAllDayEndDate(), TZ, 'yyyy-MM-dd')};
@@ -252,6 +257,61 @@ function events_(calendarId, startTime, endTime) {
     }
     return o;
   });
+}
+
+/* ---- writing: only the main calendar, only single (not recurring) events ----
+   event = {title, start, end, allDay, location, description}; start/end "YYYY-MM-DDTHH:MM" local time (Europe/Berlin)
+   or "YYYY-MM-DD" for all day (end exclusive). "at" = the event's current start (ISO), to find the right event. */
+function parseLocal_(s) {
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) throw new Error('bad date: ' + s);
+  if (!m[4]) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Utilities.parseDate(m[1] + '-' + m[2] + '-' + m[3] + ' ' + m[4] + ':' + m[5], TZ, 'yyyy-MM-dd HH:mm');
+}
+function shape_(ev) {
+  var o = {id: ev.getId(), summary: ev.getTitle(), location: ev.getLocation(), description: ev.getDescription(), recurring: ev.isRecurringEvent(), writable: !ev.isRecurringEvent()};
+  if (ev.isAllDayEvent()) { o.start = {date: Utilities.formatDate(ev.getAllDayStartDate(), TZ, 'yyyy-MM-dd')}; o.end = {date: Utilities.formatDate(ev.getAllDayEndDate(), TZ, 'yyyy-MM-dd')}; }
+  else { o.start = {dateTime: ev.getStartTime().toISOString()}; o.end = {dateTime: ev.getEndTime().toISOString()}; }
+  return o;
+}
+function findEvent_(id, at) {
+  var cal = CalendarApp.getDefaultCalendar(), t = at ? new Date(at) : null, ev = null;
+  if (t && !isNaN(t)) {
+    var list = cal.getEvents(new Date(t.getTime() - 36e5 * 24), new Date(t.getTime() + 36e5 * 24));
+    for (var i = 0; i < list.length; i++) if (list[i].getId() === id) { ev = list[i]; break; }
+  }
+  if (!ev) ev = cal.getEventById(id);
+  if (!ev) throw new Error('event not found');
+  if (ev.isRecurringEvent()) throw new Error('recurring events are changed in Google Calendar');
+  return ev;
+}
+function createEvent_(e) {
+  if (!e || !e.title || !e.start) throw new Error('title and start needed');
+  var cal = CalendarApp.getDefaultCalendar(), opt = {location: e.location || '', description: e.description || ''}, ev;
+  if (e.allDay) {
+    var s = parseLocal_(e.start), en = e.end ? parseLocal_(e.end) : null;
+    ev = en && en.getTime() > s.getTime() + 864e5 ? cal.createAllDayEvent(e.title, s, en, opt) : cal.createAllDayEvent(e.title, s, opt);
+  } else {
+    var st = parseLocal_(e.start), end = e.end ? parseLocal_(e.end) : new Date(st.getTime() + 36e5);
+    if (end <= st) throw new Error('end before start');
+    ev = cal.createEvent(e.title, st, end, opt);
+  }
+  return shape_(ev);
+}
+function updateEvent_(id, at, e) {
+  var ev = findEvent_(id, at);
+  if (e.title != null) ev.setTitle(e.title);
+  if (e.location != null) ev.setLocation(e.location);
+  if (e.description != null) ev.setDescription(e.description);
+  if (e.start) {
+    if (e.allDay) ev.setAllDayDate(parseLocal_(e.start));
+    else { var st = parseLocal_(e.start), end = e.end ? parseLocal_(e.end) : new Date(st.getTime() + (ev.getEndTime() - ev.getStartTime())); if (end <= st) throw new Error('end before start'); ev.setTime(st, end); }
+  }
+  return shape_(ev);
+}
+function deleteEvent_(id, at) {
+  findEvent_(id, at).deleteEvent();
+  return true;
 }
 
 /* ---------------- health files in Drive (read only) ---------------- */

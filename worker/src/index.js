@@ -11,6 +11,10 @@
      /push       {key, title, body, tag?, url?, by?}    -> {ok, sent, delivered, removed, results}
      /status     {key}                                  -> {ok, subs:[...], log:[...]}
      /unsubscribe {key, endpoint}                       -> {ok}
+     /assistant  {key, text, now, events?}              -> {ok, action, event?, id?, reply}
+                 (23.10.2026) turns one spoken sentence into a calendar change proposal with Claude.
+                 Needs the secret ANTHROPIC_API_KEY on this worker. The app shows the proposal and only
+                 writes to Google Calendar after Oti taps "Add"; the worker never touches the calendar.
    GET /health -> {ok}   GET /vapid -> {publicKey} */
 import { newVapidKeys, sendPush } from "./webpush.js";
 
@@ -58,6 +62,46 @@ async function authed(env, body) {
 async function log(env, kind, title, sent, delivered, removed, detail) {
   await env.DB.prepare("INSERT INTO log (ts, kind, title, sent, delivered, removed, detail) VALUES (?, ?, ?, ?, ?, ?, ?)")
     .bind(new Date().toISOString(), kind, String(title || "").slice(0, 120), sent, delivered, removed, String(detail || "").slice(0, 500)).run();
+}
+
+/* ---------- assistant: sentence -> calendar proposal (Claude) ---------- */
+const MAX_ASSIST_PER_DAY = 80;
+const ASSIST_MODEL = "claude-haiku-5-5";
+const ASSIST_TOOL = {
+  name: "calendar_change",
+  description: "The one calendar change Oti asked for, or action none if the sentence is not a calendar request or is unclear.",
+  input_schema: { type: "object", properties: {
+    action: { type: "string", enum: ["create", "update", "delete", "none"] },
+    id: { type: "string", description: "id of the existing event for update or delete, taken from the event list" },
+    title: { type: "string" }, start: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD for all day" },
+    end: { type: "string", description: "local time YYYY-MM-DDTHH:MM, or YYYY-MM-DD (exclusive) for all day" },
+    allDay: { type: "boolean" }, location: { type: "string" },
+    reply: { type: "string", description: "one short sentence in the language Oti used, saying what will happen or what is missing" }
+  }, required: ["action", "reply"] }
+};
+async function doAssist(env, body) {
+  if (!env.ANTHROPIC_API_KEY) return { ok: false, error: "assistant not set up", code: "no_api_key" };
+  const text = String(body.text || "").trim().slice(0, 600);
+  if (!text) return { ok: false, error: "empty" };
+  const day = new Date().toISOString().slice(0, 10);
+  const used = await env.DB.prepare("SELECT COUNT(*) AS n FROM log WHERE kind = 'assist' AND ts >= ?").bind(day).first();
+  if (used && used.n >= MAX_ASSIST_PER_DAY) return { ok: false, error: "daily assistant limit reached" };
+  const events = (Array.isArray(body.events) ? body.events : []).slice(0, 80).map(e => ({ id: String(e.id || "").slice(0, 200), title: String(e.title || "").slice(0, 120), start: String(e.start || "").slice(0, 25), end: String(e.end || "").slice(0, 25), recurring: !!e.recurring }));
+  const sys = "You turn one sentence from Oti into exactly one change to his Google calendar. Time zone Europe/Berlin. " +
+    "Now: " + String(body.now || new Date().toISOString()).slice(0, 40) + ". Default length 60 minutes if no end is given. " +
+    "Relative dates (morgen, übermorgen, nächsten Freitag) are resolved from now. For update or delete use only an id from the event list and never a recurring event. " +
+    "If something essential is missing or ambiguous, use action none and ask for it in reply. Never invent attendees. Always call the tool.";
+  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST",
+    headers: { "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model: ASSIST_MODEL, max_tokens: 400, system: sys, tools: [ASSIST_TOOL], tool_choice: { type: "tool", name: "calendar_change" },
+      messages: [{ role: "user", content: "Events this and next week:\n" + JSON.stringify(events) + "\n\nSentence: " + text }] }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { await log(env, "assist", "error", 0, 0, 0, (j && j.error && j.error.message) || r.status); return { ok: false, error: "assistant error " + r.status }; }
+  const use = (j.content || []).find(c => c.type === "tool_use");
+  const out = use ? use.input : { action: "none", reply: "Ich habe das nicht verstanden." };
+  await log(env, "assist", out.action, 0, 0, 0, text.slice(0, 200));
+  const ev = out.action === "create" || out.action === "update" ? { title: out.title || "", start: out.start || "", end: out.end || "", allDay: !!out.allDay, location: out.location || "" } : undefined;
+  return { ok: true, action: out.action, id: out.id || null, event: ev, reply: String(out.reply || "").slice(0, 300) };
 }
 
 async function doPush(env, body) {
@@ -143,6 +187,7 @@ export default {
         return json(req, { ok: true });
       }
       if (url.pathname === "/push") return json(req, await doPush(env, body));
+      if (url.pathname === "/assistant") return json(req, await doAssist(env, body));
       if (url.pathname === "/status") {
         const { results: subs } = await env.DB.prepare("SELECT device, created, seen, last_ok, last_status, fails, substr(endpoint, 1, 40) AS host FROM subs").all();
         const { results: lg } = await env.DB.prepare("SELECT ts, kind, title, sent, delivered, removed, detail FROM log ORDER BY id DESC LIMIT 20").all();
