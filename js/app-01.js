@@ -367,7 +367,7 @@ function calEventsForDay(date){
       const s = new Date(ev.start.dateTime), e = new Date(ev.end?.dateTime || ev.start.dateTime);
       const sm = (s - k0)/6e4, em = (e - k0)/6e4;
       if(em <= 0 || sm >= 1440) continue;
-      out.push({t:ev.summary||"Busy", s:Math.max(sm,0), e:em, src:"cal"});
+      out.push({t:ev.summary||"Busy", s:Math.max(sm,0), e:em, src:"cal", cont: sm<0});
     }
   }
   // student lessons ("Name - Musikunterricht") become one "Music lessons" block; a gap of 60 min or more splits it
@@ -427,7 +427,7 @@ function busyFor(date){
 }
 function wakeFor(date){
   const anchor = toMin(profile.wake), busy = busyFor(date);
-  const first = busy.find(b=>b.e>240);
+  const first = busy.find(b=>b.e>240 && !b.cont);
   if(first && first.s < anchor + profile.prepMin){ const wk = first.s - profile.prepMin; return {wake: wk, early: anchor - wk > 30, reason:first.t}; }
   return {wake: anchor, early:false};
 }
@@ -437,7 +437,7 @@ function bedFor(date){
   const rw = Math.max(1, weekIndex(date)), ramp = Math.max(1395, 1470 - 15*(rw-1));
   let target = Math.max(ideal, Math.min(date.getDay()===6 ? Math.min(ramp, 1425) : ramp, next.wake + 1440 - 390));
   if(typeof isEveningDay==="function" && habits && isEveningDay(date)) target = Math.min(target, toMin(habits.evening.time) + 45);
-  const lastEnd = Math.max(0, ...busyFor(date).filter(b=>b.e>=17*60).map(b=>b.e));
+  const lastEnd = Math.min(1440+120, Math.max(0, ...busyFor(date).filter(b=>b.e>=17*60 && b.e-b.s<=16*60).map(b=>b.e)));
   if(lastEnd && lastEnd + 45 > target) return {bed:lastEnd+60, late:true, reason:"late event", nextWake:next.wake, inBed: next.wake+1440-(lastEnd+60), early: next.early, earlyReason: next.reason};
   return {bed:target, late:false, ramp:target>ideal, nextWake:next.wake, inBed: next.wake+1440-target, early: next.early, earlyReason: next.reason};
 }
