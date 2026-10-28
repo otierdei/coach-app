@@ -280,29 +280,42 @@ function sessionDef(key, w){
   const P = paces(), wb = clamp(w,1,12), dl = DELOAD(wb), cyc = (wb-1)%4, phase = wb<=3?0:wb<=7?1:2;
   const E = `${pace(P.E2)} to ${pace(P.E1)}, HR under 150`;
   let d;
+  // Run sessions spell out exactly how to run them: time per rep, recovery, effort, pacing check, fallback (Oti, 28.10.2026)
+  const WU = `15 min easy (${pace(P.E2)} to ${pace(P.E1)}, HR under 150), then 4 strides: 20 s each, smoothly speed up to about 5k pace, then 40 s easy jog or walk back`;
+  const CD = `10 min easy jog, then walk 2 min`;
+  const p5 = secs(latest("t5k"))/5;
+  const testRun = km => `Run ${km} km all out. Start at ${pace(km===5? p5 : p5*1.045)} and hold it evenly; ${km===5? "after 3 km" : "after 7 km"} speed up if you still can, last 500 m everything. Do not start faster than that pace. Log the time in Progress, it resets all your paces.`;
   if(key==="test5k") d = {name:"5k test", hard:true, keySession:true, min:55, type:"run", blocks:[
-      {n:"Warm up", d:"15 min easy + 4 strides", s:1},{n:"5k time trial", d:"All out, even pacing: start at about 4:35/km, speed up after 3 km. Log the time in Progress, it resets all your paces.", s:1},{n:"Cool down", d:"10 min easy", s:1}]};
+      {n:"Warm up", d:WU, s:1},{n:"5k time trial", d:testRun(5), s:1},{n:"Cool down", d:CD, s:1}]};
   else if(key==="intervals"){
-    const plan = [[5,"400 m","I","90 s jog"],[5,"800 m","I","2 min jog"],[6,"800 m","I","2 min jog"],[4,"400 m","I","easy, deload"],[5,"1000 m","I","2:30 jog"],[6,"800 m","I","2 min jog"],[4,"1200 m","I","3 min jog"],[6,"400 m","R","full recovery, deload"],[3,"1600 m","I","3 min jog"],[6,"1000 m","G","2 min jog, goal pace"],[5,"1200 m","I","2:30 jog"],["TEST"]][wb-1];
-    if(wb===3 || wb===7) d = {name:"Hill repeats", hard:true, keySession:true, min:55, type:"run", blocks:[
-      {n:"Warm up", d:"15 min easy to your hill + 4 strides", s:1},
-      {n:`${wb===3?8:10} × 60 s uphill`, d:"Hard but controlled, about 5k effort, tall posture, jog back down", s:wb===3?8:10},
-      {n:"Cool down", d:"10 min easy", s:1}]};
+    // [reps, metres, pace zone, recovery jog between reps]
+    const plan = [[5,400,"I","90 s"],[5,800,"I","2 min"],[6,800,"I","2 min"],[4,400,"I","2 min"],[5,1000,"I","2:30 min"],[6,800,"I","2 min"],[4,1200,"I","3 min"],[6,400,"R","2:30 min"],[3,1600,"I","3 min"],[6,1000,"G","2 min"],[5,1200,"I","2:30 min"],["TEST"]][wb-1];
+    const FEEL = {
+      I: "Hard but controlled, about 8 of 10. Heart rate climbs to around 170 to 180 by the last reps.",
+      R: "Fast and relaxed, about 7 of 10. Deload week: smooth, tall, quick feet, never strained.",
+      G: "Your goal 5k pace, about 8 of 10. Practise holding it exactly, rep after rep."
+    };
+    if(wb===3 || wb===7){ const n = wb===3?8:10;
+      d = {name:"Hill repeats", hard:true, keySession:true, min:55, type:"run", blocks:[
+      {n:"Warm up", d:WU.replace("15 min easy", "15 min easy to your hill"), s:1},
+      {n:`${n} × 60 s uphill`, d:`Each rep: 60 s up a steady, moderate hill at about 5k effort, 8 of 10. Tall posture, short quick steps, drive the arms. Recovery: jog slowly back down to your start point (about 90 s), then go again. Pacing check: every rep should end at about the same spot on the hill. If you fall clearly short despite full effort, run the rest for 45 s instead of stopping and tick them as reduced.`, s:n},
+      {n:"Cool down", d:CD, s:1}]}; }
     else if(plan[0]==="TEST" && wb===12) d = {name:"10k test", hard:true, keySession:true, min:75, type:"run", blocks:[
-      {n:"Warm up", d:"15 min easy + 4 strides", s:1},{n:"10k time trial", d:`Even pacing, start at ${pace(secs(latest("t5k"))/5*1.045)}, speed up after 7 km. Log it in Progress.`, s:1},{n:"Cool down", d:"10 min easy", s:1}]};
+      {n:"Warm up", d:WU, s:1},{n:"10k time trial", d:testRun(10), s:1},{n:"Cool down", d:CD, s:1}]};
     else if(plan[0]==="TEST") d = {name:"5k test", hard:true, keySession:true, min:55, type:"run", blocks:[
-      {n:"Warm up", d:"15 min easy + 4 strides", s:1},{n:"5k time trial", d:"All out, even pacing. Log it in Progress.", s:1},{n:"Cool down", d:"10 min easy", s:1}]};
-    else d = {name:"Intervals", hard:true, keySession:true, min:60, type:"run", blocks:[
-      {n:"Warm up", d:"15 min easy + 4 strides", s:1},
-      {n:`${plan[0]} × ${plan[1]}`, d:`@ ${pace(P[plan[2]])} · ${plan[3]}`, s:plan[0]},
-      {n:"Cool down", d:"10 min easy", s:1}]};
+      {n:"Warm up", d:WU, s:1},{n:"5k time trial", d:testRun(5), s:1},{n:"Cool down", d:CD, s:1}]};
+    else { const [reps, m, z, rec] = plan, ps = P[z], rep = mmss(ps*m/1000);
+      d = {name:"Intervals", hard:true, keySession:true, min:60, type:"run", blocks:[
+      {n:"Warm up", d:WU, s:1},
+      {n:`${reps} × ${m} m`, d:`Each rep: ${m} m in ${rep} min (${pace(ps)}). After each rep ${rec} slow jog, keep moving, do not stand; no jog after the last rep, go straight into the cool down. ${dl && z==="I"? "Deload week: controlled, about 7 of 10, finish feeling you could do two more." : FEEL[z]} Pacing check: the last rep is as fast as the first. If rep 1 is clearly faster than ${rep}, you pay for it from rep 3. If you cannot hold the pace despite full effort, run the rest about 8 s per km slower instead of stopping and tick them as reduced. Best on a flat route without traffic lights${m%400===0? `, on a 400 m track that is ${m/400} ${m===400?"lap":"laps"}` : m===1000? ", on a 400 m track 2.5 laps" : ""}.`, s:reps},
+      {n:"Cool down", d:CD, s:1}]}; }
   } else if(key==="easy"){
     const m = [35,40,40,30,45,30,45,35,45,50,45,30][wb-1];
     const hs = [4,5,6,4,6,5,8,5,8,10,10,6][wb-1], hsec = wb>=7?10:8;
     d = {name:"Easy run + hill sprints", hard:false, min:m+15, type:"run", blocks:[{n:`${m} min easy`, d:E, s:1},{n:`${hs} × ${hsec} s hill sprints`, d:"Max effort uphill, walk back down, full 2 min rest. Stop if form breaks.", s:hs}]};
   } else if(key==="long"){
     const m = [50,60,65,50,70,55,75,55,80,80,85,50][wb-1], tempo = [2,5,7,9,10].includes(wb);
-    d = {name:"Long run", hard:tempo, min:m+10, type:"run", blocks:[{n:`${tempo? m-(wb>=9?15:10) : m} min easy`, d:E, s:1}].concat(tempo? [{n:`${wb>=9?15:10} min tempo finish`, d:`@ ${pace(P.T)}`, s:1}] : [])};
+    d = {name:"Long run", hard:tempo, min:m+10, type:"run", blocks:[{n:`${tempo? m-(wb>=9?15:10) : m} min easy`, d:E, s:1}].concat(tempo? [{n:`${wb>=9?15:10} min tempo finish`, d:`Straight from the easy part, no break: the last ${wb>=9?15:10} min at ${pace(P.T)}. Comfortably hard, about 7 of 10: you can say a few words but not chat. Steady, do not sprint the end.`, s:1}] : [])};
   } else {
     const maxPU = Number(validTest("pullups"))||7, maxPush = Number(validTest("pushups"))||35;
     const sets = dl? 3 : 4 + (cyc>=2?1:0);
