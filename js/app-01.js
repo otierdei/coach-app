@@ -428,8 +428,14 @@ function calMsg(c){
 const ILD_RE = /\bILD\b/i;
 const ILD_DATES = ["2026-10-10","2026-11-07","2026-12-05","2027-01-16","2027-02-13","2027-03-13","2027-04-10","2027-06-12"];
 function isILD(date){ return ILD_DATES.includes(dateKey(date)) || calEventsForDay(date).some(e=>ILD_RE.test(e.t)) || allDayFor(date).some(t=>ILD_RE.test(t)); }
+// Baden Wuerttemberg school holidays: the "...ferien" ranges in habits.noFast. No music lessons from the template then (Oti, 26.10.2026)
+function isSchoolHoliday(date){
+  const k = dateKey(date);
+  try{ return (habits.noFast||[]).some(x=>/ferien/i.test(x.why||"") && x.from<=k && (x.to||x.from)>=k); }catch(e){ return false; }
+}
 function busyFor(date){
   const t = (profile.week[String(date.getDay())]||[]).map(x=>({t:x.t,s:toMin(x.s),e:toMin(x.e),src:"tmpl"}));
+  if(isSchoolHoliday(date)) for(let i=t.length-1;i>=0;i--) if(/music lessons/i.test(t[i].t)) t.splice(i,1);
   const cal = calEventsForDay(date).filter(e=>!/bewegungspause|movement break/i.test(e.t));
   if(cal.some(e=>e.t==="Music lessons")) for(let i=t.length-1;i>=0;i--) if(/music lessons/i.test(t[i].t)) t.splice(i,1);
   for(const re of [/deep ?work/i, /lunch|mittag/i, /dinner|abendessen/i]) if(cal.some(e=>re.test(e.t))) for(let i=t.length-1;i>=0;i--) if(re.test(t[i].t)) t.splice(i,1);
