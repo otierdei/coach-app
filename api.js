@@ -12,6 +12,11 @@
   const DOCS = ["profile","log","health","schedule","briefing","habits","tasks","monthly"];
   // docs that the scheduled tasks also write: on a version conflict we merge (server keys survive, our values win)
   const MERGE_DOCS = new Set(["log","health"]);
+  // docs that HQ (Claude) also changes through the inbox (mode patch): on a conflict, or when an unsaved local copy
+  // meets a newer server copy, merge three ways by id against the copy last read from the server.
+  // (28./29.10.2026: a stale unsaved copy of tasks was shown instead of the server copy and then saved over it,
+  //  which deleted tasks HQ had just added.)
+  const PATCH_DOCS = new Set(["tasks"]);
 
   // one tap setup: https://.../#connect=<base64url of {u,k}>
   (function readHash(){
@@ -57,6 +62,34 @@
     for(const [k,v] of Object.entries(mine)) out[k] = isObj(v) && isObj(server[k]) ? mergeDeep(server[k], v) : v;
     return out;
   }
+  const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
+  const idList = x => Array.isArray(x) && x.length > 0 && x.every(o => isObj(o) && o.id != null);
+  // three way merge: what I changed against base wins, everything else comes from the server
+  function merge3(base, server, mine){
+    if(same(mine, base)) return server;
+    if(same(server, base)) return mine;
+    if(isObj(base) && isObj(server) && isObj(mine)){
+      const out = {};
+      for(const k of new Set([...Object.keys(server), ...Object.keys(mine)])){
+        const inS = k in server, inM = k in mine, inB = k in base;
+        if(inS && inM) out[k] = merge3(base[k], server[k], mine[k]);
+        else if(inS){ if(!inB || !same(server[k], base[k])) out[k] = server[k]; }      // I deleted it: keep only if the server changed it
+        else if(!inB || !same(mine[k], base[k])) out[k] = mine[k];                         // server deleted it: keep only if I changed it
+      }
+      return out;
+    }
+    if((idList(base) || idList(server) || idList(mine)) && [base, server, mine].every(x => x == null || Array.isArray(x))){
+      const B = new Map((base||[]).map(o=>[String(o.id), o])), S = new Map((server||[]).map(o=>[String(o.id), o])), M = new Map((mine||[]).map(o=>[String(o.id), o]));
+      const out = [];
+      for(const [id, s] of S){
+        if(M.has(id)) out.push(B.has(id) ? merge3(B.get(id), s, M.get(id)) : M.get(id));
+        else if(!B.has(id) || !same(s, B.get(id))) out.push(s);                            // new on the server, or changed there after I deleted it
+      }
+      for(const [id, m] of M){ if(!S.has(id) && (!B.has(id) || !same(m, B.get(id)))) out.push(m); }   // new here, or changed here after the server deleted it
+      return out;
+    }
+    return mine;
+  }
   let prefetch = null;           // one readAll shared by all get() calls of one load
   function readAllOnce(){
     if(!prefetch) prefetch = call("readAll").then(r=>r.docs||{}).catch(e=>{ prefetch = null; throw e; });
@@ -66,20 +99,26 @@
   // docs read from the server in this page session. A doc that was not read from the server is never written
   // as a whole: the write goes with an impossible base version, so the server answers with its current copy first.
   // (20.10.2026: a phone that had been offline kept a small local copy and overwrote the full log on the server.)
-  const loaded = new Set(), mergeEpoch = {};
+  const loaded = new Set(), mergeEpoch = {}, preMerge = {};
   async function writeDoc(name, data){
-    let attempt = 0, merged = false;
+    let attempt = 0, merged = false; const original = data;
     while(true){
       const base = loaded.has(name) ? (versions[name] ?? 0) : -1;
       const r = await call("write", {doc:name, data, baseVersion: base});
-      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); delete pending[name]; LS.set("pending", pending); loaded.add(name);
+      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); delete pending[name]; LS.set("pending", pending); loaded.add(name); LS.set("base:"+name, data);
         // the app must continue with what is now on the server, not with its older copy
-        if(merged){ mergeEpoch[name] = (mergeEpoch[name]||0) + 1; LS.set("cache:"+name, data); try{ window.dispatchEvent(new CustomEvent("coach:merged", {detail:{name, data: JSON.parse(JSON.stringify(data))}})); }catch(e){} }
+        if(merged){ preMerge[name] = JSON.parse(JSON.stringify(original)); mergeEpoch[name] = (mergeEpoch[name]||0) + 1; LS.set("cache:"+name, data); try{ window.dispatchEvent(new CustomEvent("coach:merged", {detail:{name, data: JSON.parse(JSON.stringify(data))}})); }catch(e){} }
         return r; }
       if(r.conflict && attempt < 2){
         attempt++;
         versions[name] = r.current?.version ?? 0;
         if(MERGE_DOCS.has(name) && r.current){ data = mergeDeep(r.current.data || {}, data); merged = true; loaded.add(name); continue; }
+        if(PATCH_DOCS.has(name) && r.current){
+          const base = LS.get("base:"+name);
+          // without a base we cannot tell my changes from old data: keep the server copy, never overwrite it
+          data = base ? merge3(base, r.current.data || {}, data) : (r.current.data || {});
+          LS.set("base:"+name, r.current.data || {}); merged = true; loaded.add(name); continue;
+        }
         throw Object.assign(new Error("Version conflict on "+name+": reload to see the newest data"), {code:"conflict"});
       }
       throw Object.assign(new Error("Version conflict on "+name), {code:"conflict"});
@@ -93,6 +132,7 @@
       if(pending[name] !== snapshot) return;        // a newer write superseded this one
       // taken from the old copy before a merge with the server: lay it over the merged copy instead of replacing it
       if(MERGE_DOCS.has(name) && (mergeEpoch[name]||0) > epoch){ snapshot = mergeDeep(LS.get("cache:"+name) || {}, snapshot); pending[name] = snapshot; LS.set("pending", pending); }
+      if(PATCH_DOCS.has(name) && (mergeEpoch[name]||0) > epoch && preMerge[name]){ snapshot = merge3(preMerge[name], LS.get("cache:"+name) || {}, snapshot); pending[name] = snapshot; LS.set("pending", pending); }
       return writeDoc(name, snapshot);
     });
     chains[name] = p;
@@ -112,9 +152,15 @@
           try{ const all = await readAllOnce(); rec = all[name] || null; }
           catch(e){ const c = pending[name] || LS.get("cache:"+name); return {exists: !!c, data: ()=>c}; }
           loaded.add(name);
-          if(rec){ versions[name] = rec.version; LS.set("versions", versions); LS.set("cache:"+name, rec.data); }
+          const base = LS.get("base:"+name);
+          if(rec){ versions[name] = rec.version; LS.set("versions", versions); LS.set("cache:"+name, rec.data); LS.set("base:"+name, rec.data); }
           // an unsaved local change is shown on top of the server copy, never instead of it
-          if(pending[name]){ const p = MERGE_DOCS.has(name) && rec ? mergeDeep(rec.data || {}, pending[name]) : pending[name]; return {exists:true, data:()=>p}; }
+          if(pending[name]){
+            let p = pending[name];
+            if(rec && MERGE_DOCS.has(name)) p = mergeDeep(rec.data || {}, pending[name]);
+            else if(rec && PATCH_DOCS.has(name)){ p = base ? merge3(base, rec.data || {}, pending[name]) : rec.data; pending[name] = p; LS.set("pending", pending); }
+            return {exists:true, data:()=>p};
+          }
           return {exists: !!rec, data: ()=>rec ? rec.data : undefined};
         },
         async set(obj){ LS.set("cache:"+name, obj); return queueWrite(name, obj); }
