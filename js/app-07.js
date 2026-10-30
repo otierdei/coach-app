@@ -18,10 +18,10 @@ function openPlan(){
 
 /* ---------- render + bind ---------- */
 function renderLife(){
-  const seg = `<div class="pw-seg" role="group" aria-label="${L("Area","Bereich")}"><button type="button" data-seg="spirit" aria-pressed="${lifeSeg==="spirit"}">${L("Spiritual life","Geistliches Leben")}</button><button type="button" data-seg="music" aria-pressed="${lifeSeg==="music"}">${L("Music","Musik")}</button></div>`;
+  const seg = `<div class="pw-seg" role="group" aria-label="${L("Area","Bereich")}"><button type="button" data-seg="spirit" aria-pressed="${lifeSeg==="spirit"}">${L("Spiritual life","Geistliches Leben")}</button><button type="button" data-seg="music" aria-pressed="${lifeSeg==="music"}">${L("Music","Musik")}</button><button type="button" data-seg="fin" aria-pressed="${lifeSeg==="fin"}">${L("Money","Finanzen")}</button></div>`;
   $("#v-life").innerHTML = lifeSeg==="spirit"
     ? `<div class="ptw" data-notr>${seg}${spiritHtml()}</div>`
-    : `<div data-notr style="display:grid;gap:14px"><div class="ptw" style="padding-block:14px 4px;background:transparent">${seg}</div>${musicHtml()}</div>`;
+    : `<div data-notr style="display:grid;gap:14px"><div class="ptw" style="padding-block:14px 4px;background:transparent">${seg}</div>${lifeSeg==="fin" ? finHtml() : musicHtml()}</div>`;
   const root = $("#v-life");
   root.querySelectorAll("[data-seg]").forEach(b=>b.onclick = ()=>{ lifeSeg = b.dataset.seg; try{ sessionStorage.setItem("ohc-lifeseg", lifeSeg); }catch(e){} renderLife(); });
   bindHabitTicks(root);
@@ -44,6 +44,24 @@ function renderLife(){
   root.querySelectorAll("[data-mu-del]").forEach(b=>b.onclick = async ()=>{ if(b.dataset.armed!=="1"){ b.dataset.armed="1"; b.textContent = L("Sure?","Sicher?"); return; } const [k,id] = b.dataset.muDel.split("|"); const H = hab(k); H.mu = (H.mu||[]).filter(x=>x.id!==id); renderLife(); await saveLogH(); });
   const fs = $("#fcSave"); if(fs) fs.onclick = async ()=>{ const t = $("#fcText").value.trim(); const F = habits.focus;
     if(t && t!==F.text) F.from = dateKey(new Date()); F.text = t; F.startBpm = Number($("#fcStart").value)||null; F.targetBpm = Number($("#fcTarget").value)||null; renderLife(); await saveHabits(); };
+}
+/* ================= Finanzen (30.10.2026): traffic light only, no amounts =================
+   Written by HQ after each monthly finance check into log.fin through the inbox (mode merge):
+   {stand:"YYYY-MM-DD", items:[{label, state:"g"|"y"|"r", text}], next:[{due, text}], link:"https://claude.ai/artifact/..."}
+   Amounts and balances live only in the claude.ai dashboard behind Oti's login, never in Coach Data. */
+function finHtml(){
+  const F = logData.fin;
+  if(!F || !Array.isArray(F.items)) return `<div class="card"><h3>${L("Money","Finanzen")}</h3><p class="small muted">${L("No finance check yet. HQ fills this after the check on the 7th.","Noch kein Finanzcheck. HQ füllt das nach dem Check am 7.")}</p></div>`;
+  const word = {g:L("On track","Im Plan"), y:L("Watch","Beobachten"), r:L("Act","Handeln")};
+  const cls = st => ["g","y","r"].includes(st) ? st : "y";
+  const worst = F.items.some(i=>i.state==="r") ? "r" : F.items.some(i=>i.state==="y") ? "y" : "g";
+  const age = F.stand ? Math.round((new Date(dateKey(new Date())) - new Date(F.stand)) / 864e5) : null;
+  let h = `<div class="card"><div class="spread"><h3>${L("Money","Finanzen")}</h3><span class="chip ${worst}"><span class="dot"></span>${word[worst]}</span></div>`;
+  h += `<p class="small muted">${L("As of","Stand")} ${F.stand ? esc(F.stand.split("-").reverse().join(".")) : "?"}${age!=null && age>40 ? " · "+L("older than a month","älter als ein Monat") : ""}. ${L("No amounts here, only the traffic light.","Hier keine Beträge, nur die Ampel.")}</p>`;
+  h += `<div class="list">${F.items.map(i=>`<div class="spread" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:nowrap;align-items:center"><div style="min-width:0;flex:1"><b>${esc(i.label)}</b><div class="small muted">${esc(i.text||"")}</div></div><span class="chip ${cls(i.state)}" style="flex-shrink:0"><span class="dot"></span>${word[cls(i.state)]}</span></div>`).join("")}</div></div>`;
+  if(Array.isArray(F.next) && F.next.length) h += `<div class="card"><h3>${L("Next steps","Nächste Schritte")}</h3><div class="list">${F.next.slice(0,3).map(n=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><span class="small muted">${esc(n.due||"")}</span><div>${esc(n.text||"")}</div></div>`).join("")}</div></div>`;
+  if(F.link && /^https:\/\/claude\.ai\//.test(F.link)) h += `<div class="card"><a class="ghost" href="${esc(F.link)}" target="_blank" rel="noopener" style="display:inline-block;padding:10px 14px;border-radius:12px;border:1px solid var(--line);text-decoration:none;color:inherit">${L("Open dashboard with amounts","Dashboard mit Beträgen öffnen")}</a><p class="small muted" style="margin-top:6px">${L("Needs your claude.ai login.","Braucht deinen claude.ai Login.")}</p></div>`;
+  return h;
 }
 function bindHabitTicks(root){
   root.querySelectorAll("[data-hab]").forEach(b=>b.onclick = async ()=>{ const k = dateKey(new Date()), H = hab(k), f = b.dataset.hab; H[f] = !H[f]; if(!H[f]) delete H[f]; render(); await saveLogH(); });
