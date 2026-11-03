@@ -11,7 +11,13 @@
   };
   const DOCS = ["profile","log","health","schedule","briefing","habits","tasks","monthly"];
   // docs that the scheduled tasks also write: on a version conflict we merge (server keys survive, our values win)
-  const MERGE_DOCS = new Set(["log","health"]);
+  const MERGE_DOCS = new Set(["health"]);
+  // log (03.11.2026): merged three ways against the copy last read from the server, like tasks.
+  // Before, "my values win" let a stale copy (Mac window open all day, or a cold start where the server read timed out)
+  // overwrite newer protein totals from the iPhone. Simulated with the real log: 40 g and 50 g lost.
+  const LOG3_DOCS = new Set(["log"]);
+  const norms = {};              // name -> fn(data) that repairs derived fields after a merge (log: protein totals)
+  const norm = (name, d) => { try{ if(norms[name] && d) norms[name](d); }catch(e){} return d; };
   // docs that HQ (Claude) also changes through the inbox (mode patch): on a conflict, or when an unsaved local copy
   // meets a newer server copy, merge three ways by id against the copy last read from the server.
   // (28./29.10.2026: a stale unsaved copy of tasks was shown instead of the server copy and then saved over it,
@@ -119,6 +125,12 @@
           data = base ? merge3(base, r.current.data || {}, data) : (r.current.data || {});
           LS.set("base:"+name, r.current.data || {}); merged = true; loaded.add(name); continue;
         }
+        if(LOG3_DOCS.has(name) && r.current){
+          const base = LS.get("base:"+name);
+          // without a base (first run on a device) fall back to the old deep merge so a fresh tap is not lost
+          data = norm(name, base ? merge3(base, r.current.data || {}, data) : mergeDeep(r.current.data || {}, data));
+          LS.set("base:"+name, r.current.data || {}); merged = true; loaded.add(name); continue;
+        }
         throw Object.assign(new Error("Version conflict on "+name+": reload to see the newest data"), {code:"conflict"});
       }
       throw Object.assign(new Error("Version conflict on "+name), {code:"conflict"});
@@ -132,7 +144,7 @@
       if(pending[name] !== snapshot) return;        // a newer write superseded this one
       // taken from the old copy before a merge with the server: lay it over the merged copy instead of replacing it
       if(MERGE_DOCS.has(name) && (mergeEpoch[name]||0) > epoch){ snapshot = mergeDeep(LS.get("cache:"+name) || {}, snapshot); pending[name] = snapshot; LS.set("pending", pending); }
-      if(PATCH_DOCS.has(name) && (mergeEpoch[name]||0) > epoch && preMerge[name]){ snapshot = merge3(preMerge[name], LS.get("cache:"+name) || {}, snapshot); pending[name] = snapshot; LS.set("pending", pending); }
+      if((PATCH_DOCS.has(name) || LOG3_DOCS.has(name)) && (mergeEpoch[name]||0) > epoch && preMerge[name]){ snapshot = norm(name, merge3(preMerge[name], LS.get("cache:"+name) || {}, snapshot)); pending[name] = snapshot; LS.set("pending", pending); }
       return writeDoc(name, snapshot);
     });
     chains[name] = p;
@@ -159,6 +171,7 @@
             let p = pending[name];
             if(rec && MERGE_DOCS.has(name)) p = mergeDeep(rec.data || {}, pending[name]);
             else if(rec && PATCH_DOCS.has(name)){ p = base ? merge3(base, rec.data || {}, pending[name]) : rec.data; pending[name] = p; LS.set("pending", pending); }
+            else if(rec && LOG3_DOCS.has(name)){ p = norm(name, base ? merge3(base, rec.data || {}, pending[name]) : mergeDeep(rec.data || {}, pending[name])); pending[name] = p; LS.set("pending", pending); }
             return {exists:true, data:()=>p};
           }
           return {exists: !!rec, data: ()=>rec ? rec.data : undefined};
@@ -166,7 +179,8 @@
         async set(obj){ LS.set("cache:"+name, obj); return queueWrite(name, obj); }
       };
     },
-    refresh(){ prefetch = null; }
+    refresh(){ prefetch = null; },
+    setNormalizer(name, fn){ norms[name] = fn; }
   };
   // coming back to the app: the next load reads fresh data
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ db.refresh(); flushPending(); } });

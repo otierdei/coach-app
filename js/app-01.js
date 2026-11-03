@@ -76,7 +76,7 @@ async function loadDocs(){
     for(const g of ["baselines","targets","dream"]) profile[g] = {...DEFAULT_PROFILE[g], ...(profile[g]||{})}; }
   else if(p){ profile = structuredClone(DEFAULT_PROFILE); if(Array.isArray(p.calendars)) profile.calendars = p.calendars; if(Array.isArray(p.tests)) profile.tests = p.tests.filter(t=>METRICS.some(m=>m.k===t.metric)); }
   const h = await get("health"); if(h) health = {days:{},workouts:[],sources:[],driveSeen:{},...JSON.parse(JSON.stringify(h))};
-  const l = await get("log"); if(l) logData = {days:{},...JSON.parse(JSON.stringify(l))}; try{ bumpLog(); }catch(e){}
+  const l = await get("log"); if(l) logData = normProtein({days:{},...JSON.parse(JSON.stringify(l))}); try{ bumpLog(); }catch(e){}
   const b = await get("briefing"); if(b) briefing = JSON.parse(JSON.stringify(b));
   const hb = await get("habits"); if(hb && hb.version===HABITS_VERSION) habits = mergeHabits(hb);
   const tk = await get("tasks"); if(tk && tk.version===TASKS_VERSION) tasksDoc = mergeTasks(tk);
@@ -84,6 +84,33 @@ async function loadDocs(){
   // one off training changes are stored in the log doc; merged over the defaults
   profile.overrides = {...(profile.overrides||{}), ...(logData.overrides||{})};
 }
+/* ---- protein entries ---- */
+// 03.11.2026: each tap is its own entry (L.pe), the day total (L.protein) is their sum. Two devices that tap on the
+// same day now add up after a merge instead of one total overwriting the other.
+// L.pSum = the total this app last wrote. If L.protein differs from it, someone set the total from outside
+// (HQ inbox, "heute 140 g"): that total is kept through a correction entry whose id is the same on every device.
+function proteinSum(L){ return (L.pe||[]).reduce((a,e)=>a+(Number(e&&e.g)||0), 0); }
+function proteinAdd(L, g, dev){
+  if(!Array.isArray(L.pe)) L.pe = L.protein ? [{id:"base", g:Number(L.protein)||0}] : [];
+  const sum = proteinSum(L), add = Math.max(-sum, Number(g)||0);
+  if(add) L.pe.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), g:add, t:Date.now(), d:dev||""});
+  L.protein = L.pSum = Math.max(0, sum + add);
+}
+function normProtein(log){
+  for(const L of Object.values((log && log.days) || {})){
+    if(!L || !Array.isArray(L.pe)) continue;
+    let sum = proteinSum(L);
+    if(L.protein != null && L.pSum != null && Number(L.protein) !== Number(L.pSum) && Number(L.protein) !== sum){
+      const adj = Math.max(-sum, (Number(L.protein)||0) - sum);
+      const id = `adj:${L.pSum}>${L.protein}`;
+      if(adj && !L.pe.some(e=>e && e.id===id)){ L.pe.push({id, g:adj, t:Date.now(), d:"set"}); sum += adj; }
+    }
+    L.protein = L.pSum = Math.max(0, sum);
+  }
+  return log;
+}
+/* ---- end protein ---- */
+if(window.API && API.db && API.db.setNormalizer) API.db.setNormalizer("log", normProtein);
 function setSync(kind, text){ const p=$("#syncPill"); p.className="chip "+kind; p.innerHTML=`<span class="dot"></span>${esc(text)}`; }
 
 /* ================= training model ================= */

@@ -103,7 +103,7 @@ function injectTodayTasks(){
 }
 // api.js merged a write with a newer server copy: continue with the merged doc (never write the old copy again)
 window.addEventListener("coach:merged", e=>{ const {name, data} = e.detail||{};
-  if(name==="log") logData = {days:{}, ...data}; else if(name==="health") health = {days:{}, workouts:[], sources:[], driveSeen:{}, ...data}; else if(name==="tasks") tasksDoc = mergeTasks(data); else return;
+  if(name==="log") logData = normProtein({days:{}, ...data}); else if(name==="health") health = {days:{}, workouts:[], sources:[], driveSeen:{}, ...data}; else if(name==="tasks") tasksDoc = mergeTasks(data); else return;
   try{ bumpLog(); }catch(err){} planCache.clear(); render(); });
 // Fitness (23.10.2026): one tab in the bar for Progress and Sleep, switched with sub tabs at the top
 let fitSub = "progress";

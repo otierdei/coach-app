@@ -347,11 +347,7 @@ function renderToday(){
   if(openDial==="sleep") why = sm ? `<p><b>${dur(sm)}</b> asleep, ${Math.round(sm/profile.asleepNeed*100)}% of your 7:30 need.${hk.onset!=null&&hk.wakeAt!=null?` Asleep ${fmt(hk.onset)}, awake ${fmt(hk.wakeAt)}.`:""}</p><p>Tonight: last coffee ${esc(profile.coffeeCutoff)}, lights out <b>${fmt(d.bed.bed)}</b> for ${dur(d.bed.inBed)} until ${fmt(d.bed.nextWake)}.</p>` : `<p>No sleep synced for last night. Log it below so recovery isn't blind.</p>`;
   const coachLine = R.ill ? `${R.ill.text}. Keep today very easy.` : R.score==null ? "No data for last night yet. Do the check in below." :
     isFast(now) ? `Fast day. Keep strain between ${tgt[0]} and ${tgt[1]}.` : `${({g:"Green. Your body can take load.",y:"Yellow. Train, but hold something back.",r:"Red. Recovery beats training today."})[R.level]} Strain target ${tgt[0]} to ${tgt[1]}.`;
-  // ---- week strip (MCI style): tap a day for its calendar ----
-  { const mon = mondayOf(now), P = weekPlan(mon);
-    html += `<div class="wkstrip" role="group" aria-label="${L("This week","Diese Woche")}">${P.days.map(x=>`<span class="wd ${dateKey(x.date)===k?"now":""}">${SHORT[x.date.getDay()]}</span>`).join("")}
-      ${P.days.map(x=>{ const xk = dateKey(x.date), def = x.session?.def, dn = def && isDone(xk, def);
-        return `<button type="button" class="dy ${xk<k?"past":""} ${xk===k?"now":""} ${def?"tr":""} ${dn?"done":""}" data-daycal="${xk}" aria-label="${esc(x.date.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"}))}${def?` · ${esc(def.name)}`:""}"><b>${x.date.getDate()}</b><i></i></button>`; }).join("")}</div>`; }
+  // week strip removed (Oti 03.11.2026): the Week tab already shows the days, here it only took space
   // ---- body today: four tiles, tap one for the why ----
   const st0 = stagesOf(health.days[k]);
   // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
@@ -472,7 +468,7 @@ function renderToday(){
     for(const x of Object.keys(logData.overrides)) if(x < dateKey(addDays(new Date(),-14))) delete logData.overrides[x];
     planCache.clear(); render(); await saveDoc("log", logData); writeSchedule(true); };
   $("#rpe")?.addEventListener("change", async e=>{ const L = logData.days[k] = logData.days[k]||{}; L.rpe = Number(e.target.value)||null; await saveDoc("log", logData); });
-  document.querySelectorAll("[data-prot]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.protein = Math.max(0,(L.protein||0)+Number(b.dataset.prot)); render(); await saveDoc("log", logData); });
+  document.querySelectorAll("[data-prot]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; proteinAdd(L, Number(b.dataset.prot), /iPhone/.test(navigator.userAgent)?"iPhone":"Mac"); render(); await saveDoc("log", logData); });
   document.querySelectorAll("#v-today .jbtn").forEach(b=>b.onclick = ()=>{ const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
   const cr = $("#creaCheck"); if(cr) cr.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.crea = !L.crea; render(); await saveDoc("log", logData); };
   $("#btnCheckin").onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.sleepH = Number($("#ciSleep").value)||null; L.feel = Number($("#ciFeel").value)||null;
