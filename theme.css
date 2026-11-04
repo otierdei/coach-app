@@ -15,7 +15,7 @@
   --work:#B9512A; --work-on:#FFFFFF; --work-soft:rgba(185,81,42,.10); --work-ink:#A4461F;
   --track:rgba(28,26,23,.08); --shadow:none;
   --glass:rgba(255,253,249,.66); --glass-line:rgba(28,26,23,.08); --glass-on:rgba(28,26,23,.07); --glass-ink:#4A433B;
-  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 8px 30px rgba(60,40,20,.12);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 8px 30px rgba(0,0,0,.08);
   --display:"Montserrat","Arial Black",system-ui,sans-serif;
   --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"Inter",system-ui,-apple-system,sans-serif;
@@ -230,7 +230,7 @@ body.on-tasks{background:var(--bg)}
 .ptw .pw-trio .pw-mini:nth-child(1){--c:var(--pw-prayer)} .ptw .pw-trio .pw-mini:nth-child(2){--c:var(--pw-fast)} .ptw .pw-trio .pw-mini:nth-child(3){--c:var(--pw-sol)}
 .ptw .pw-mini{background:color-mix(in srgb,var(--c) 14%,var(--card))}
 .ptw .pw-mini .pw-freq{background:color-mix(in srgb,var(--c) 26%,var(--card));color:var(--ink)}
-.ptw .pw-row{border-left:3px solid color-mix(in srgb,var(--c) 70%,var(--card));background:color-mix(in srgb,var(--c) 6%,var(--card))}
+.ptw .pw-row{background:color-mix(in srgb,var(--c) 9%,var(--card))}
 .ptw .pw-tag:not(.ghost):not(.cadence){background:color-mix(in srgb,var(--c) 26%,var(--card));color:var(--ink)}
 .ptw .pw-prac{border-color:color-mix(in srgb,var(--c) 30%,var(--line))}
 .ptw .pw-verse{border-left-color:color-mix(in srgb,var(--c,var(--pw-goal)) 70%,transparent)}
