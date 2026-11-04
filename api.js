@@ -186,6 +186,8 @@
       };
     },
     refresh(){ prefetch = null; },
+    // last known copy on this device, without waiting for the server (04.11.2026: show data instantly on open)
+    peek(name){ const c = pending[name] || LS.get("cache:"+name); return c ? JSON.parse(JSON.stringify(c)) : null; },
     setNormalizer(name, fn){ norms[name] = fn; }
   };
   // coming back to the app: the next load reads fresh data

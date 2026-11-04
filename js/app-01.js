@@ -69,8 +69,9 @@ async function saveDoc(name, obj){
   try{ await db.doc("app/"+name).set(JSON.parse(JSON.stringify(obj))); }
   catch(e){ setSync("y", e.code==="quota_exceeded" ? "Storage full" : "Not saved"); }
 }
-async function loadDocs(){
-  const get = async name => { let v=null; if(db){ try{ const s=await db.doc("app/"+name).get(); if(s.exists) v=s.data(); }catch(e){} } return v || store.get(name); };
+async function loadDocs(fast){
+  // fast: only this device's last copy, so the app shows data at once; the server copy follows
+  const get = fast ? async name => (db && db.peek ? db.peek(name) : null) || store.get(name) : async name => { let v=null; if(db){ try{ const s=await db.doc("app/"+name).get(); if(s.exists) v=s.data(); }catch(e){} } return v || store.get(name); };
   const p = await get("profile");
   if(p && p.version===PROFILE_VERSION){ profile = {...structuredClone(DEFAULT_PROFILE), ...JSON.parse(JSON.stringify(p))};
     for(const g of ["baselines","targets","dream"]) profile[g] = {...DEFAULT_PROFILE[g], ...(profile[g]||{})}; }

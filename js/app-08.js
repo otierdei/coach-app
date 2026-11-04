@@ -135,6 +135,8 @@ document.addEventListener("visibilitychange", async ()=>{ if(document.hidden || 
   switchTab(tab);
   if(window.API && API.configured()){ [db, mcp, sample] = [API.db, API.mcp, API.sample]; }
   else { calState = {status:"off", msg:"Connect the backend in Setup (gear icon)."}; driveState = {status:"off", msg:"Connect the backend in Setup (gear icon)."}; }
+  // show the last copy on this device at once (04.11.2026: the app stayed empty for seconds until the server answered)
+  if(db && db.peek){ try{ await loadDocs(true); planCache.clear(); render(); if(tab==="today") injectTodayTasks(); }catch(e){} }
   await loadDocs(); if(autoTop3()) saveTasks(); planCache.clear(); if(reconcileTicks()) saveDoc("log", logData);
   startCalendar();
   switchTab(tab);
