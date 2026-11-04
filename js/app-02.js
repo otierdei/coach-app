@@ -447,7 +447,8 @@ function renderToday(){
     <div class="eyebrow">Yesterday</div>
     <div class="row" style="gap:8px">${JOURNAL.map(x=>`<button type="button" class="ghost jbtn ${logData.days[yk]?.j?.[x.k]?"on":""}" data-j="${x.k}" aria-pressed="${!!logData.days[yk]?.j?.[x.k]}" style="padding:7px 12px;font-size:13px">${esc(x.t)}</button>`).join("")}</div>
     <button id="btnCheckin" class="primary">Save check in</button></div>`;
-  if(lg.feel) more = ciHtml + more; else html = html.replace(`<div data-tk-slot></div>`, `<details class="tmore tcin" id="tCin"><summary><span>${L("Morning check in","Morgen Check in")}</span><span class="small muted">${L("20 seconds","20 Sekunden")} ›</span></summary><div class="tmorein">${ciHtml.replace(' data-fold="morning"', "")}</div></details><div data-tk-slot></div>`);
+  // done for today: the check in leaves the page and comes back tomorrow (Oti 04.11.2026)
+  if(lg.feel){} else html = html.replace(`<div data-tk-slot></div>`, `<details class="tmore tcin" id="tCin"><summary><span>${L("Morning check in","Morgen Check in")}</span><span class="small muted">${L("20 seconds","20 Sekunden")} ›</span></summary><div class="tmorein">${ciHtml.replace(' data-fold="morning"', "")}</div></details><div data-tk-slot></div>`);
 
   more += rhythmCardHtml();
   more += tomorrowCardHtml();
@@ -478,7 +479,7 @@ function renderToday(){
   document.querySelectorAll("[data-prot]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; proteinAdd(L, Number(b.dataset.prot), /iPhone/.test(navigator.userAgent)?"iPhone":"Mac"); render(); await saveDoc("log", logData); });
   document.querySelectorAll("#v-today .jbtn").forEach(b=>b.onclick = ()=>{ const on = !b.classList.contains("on"); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
   const cr = $("#creaCheck"); if(cr) cr.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.crea = !L.crea; render(); await saveDoc("log", logData); };
-  $("#btnCheckin").onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.sleepH = Number($("#ciSleep").value)||null; L.feel = Number($("#ciFeel").value)||null;
+  if($("#btnCheckin")) $("#btnCheckin").onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.sleepH = Number($("#ciSleep").value)||null; L.feel = Number($("#ciFeel").value)||null;
     const Y = logData.days[yk] = logData.days[yk]||{}; Y.j = {}; document.querySelectorAll("#v-today .jbtn.on").forEach(b=>Y.j[b.dataset.j] = true);
     render(); await saveDoc("log", logData); };
   const sp = $("#btnSpeak"); if(sp) sp.onclick = ()=>speakBriefing(sp);
