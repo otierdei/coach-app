@@ -16,9 +16,9 @@
   --track:rgba(28,26,23,.08); --shadow:none;
   --glass:rgba(255,253,249,.66); --glass-line:rgba(28,26,23,.08); --glass-on:rgba(28,26,23,.07); --glass-ink:#4A433B;
   --glass-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 8px 30px rgba(0,0,0,.08);
-  --display:"Montserrat","Arial Black",system-ui,sans-serif;
-  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --mono:"Inter",system-ui,-apple-system,sans-serif;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Hanken Grotesk",system-ui,-apple-system,sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   color-scheme:dark;
@@ -321,7 +321,7 @@ body.on-tasks{background:var(--bg)}
 .figstage{background:#151310;border-radius:18px;min-height:220px;display:grid;place-items:center;overflow:hidden}
 .figstage canvas{display:block;width:100%!important;height:auto!important}
 .figstage .muted{color:#ADA394}
-.figmus{display:flex;align-items:center;gap:8px;font:600 14px/1.35 Inter,system-ui,sans-serif}
+.figmus{display:flex;align-items:center;gap:8px;font:600 14px/1.35 var(--body)}
 .figmus .dot{width:10px;height:10px;border-radius:3px;background:#B4372A;flex-shrink:0}
 .figcues{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.45;color:var(--ink-2,var(--ink))}
 /* Today: every window folds to one line (app-11.js) */
