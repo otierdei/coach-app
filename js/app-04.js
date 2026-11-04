@@ -435,7 +435,7 @@ function speakBriefing(btn){
   const rank = v => (/premium/i.test(v.name)?40:0) + (/enhanced|natural|neural/i.test(v.name)?30:0) + (NICE.test(v.name)?10:0) + (/en-(US|GB)/i.test(v.lang)?5:0) + (/compact|eloquence|novelty|bad news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert|fred|junior|ralph|kathy|grandma|grandpa|rocko|shelley|flo|reed|sandy|eddy/i.test(v.name)?-100:0);
   const voice = pickVoice(vs, rank);
   chunks.forEach((t,i)=>{ const u = new SpeechSynthesisUtterance(t); u.lang = voice?.lang || "en-GB"; if(voice) u.voice = voice; u.rate = 0.96; u.pitch = 1;
-    if(i===chunks.length-1) u.onend = ()=>{ btn.textContent = tr("▶ Play"); }; u.onerror = ()=>{ btn.textContent = tr("▶ Play"); }; ss.speak(u); });
+    if(i===chunks.length-1) u.onend = ()=>{ btn.textContent = tr("▶ Play"); if(typeof briefingDone === "function") briefingDone(); }; u.onerror = ()=>{ btn.textContent = tr("▶ Play"); }; ss.speak(u); });
   btn.textContent = tr("■ Stop");
 }
 

@@ -331,10 +331,16 @@ function renderToday(){
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
   // next thing today (Oti 23.10.): one line instead of reading the day plan
   { const nm = now.getHours()*60 + now.getMinutes(), hide = typeof WK_HIDE !== "undefined" ? WK_HIDE : /lunch|dinner|mittag|abendessen/i;
-    const cand = busyFor(now).filter(e=>e.e > nm && !e.cont && !hide.test(e.t) && !/lunch|dinner|break|pause/i.test(e.t)).map(e=>({s:e.s, t:e.t, now:e.s<=nm}));
+    const cand = busyFor(fromKey(k)).filter(e=>e.e > nm && !e.cont && !hide.test(e.t) && !/lunch|dinner|break|pause/i.test(e.t)).map(e=>({s:e.s, t:e.t, now:e.s<=nm}));
     if(d.session && d.session.end > nm) cand.push({s:d.session.start, t:formDef(d.session.def, formLevel(k)).name, now:d.session.start<=nm, tr:true});
     cand.sort((a,b)=>a.s-b.s); const n = cand.find(x=>!x.now) || cand[0];
-    more += `<button type="button" class="nextln" data-daycal="${k}"><span class="eyebrow">${n?(n.now?L("Now","Jetzt"):L("Next","Als Nächstes")):L("Today","Heute")}</span><span class="nt">${n?`${fmt(Math.max(n.s,0))} · ${esc(n.t)}`:L("Nothing more in the calendar","Nichts mehr im Kalender")}</span><span class="small muted">${L("Day plan","Tagesplan")} ›</span></button>`; }
+    const all = busyFor(fromKey(k)).filter(e=>!e.cont && !hide.test(e.t)).map(e=>({s:e.s, e:e.e, t:e.t}));
+    if(d.session) all.push({s:d.session.start, e:d.session.end, t:formDef(d.session.def, formLevel(k)).name, tr:true});
+    all.sort((a,b)=>a.s-b.s);
+    const up = all.filter(x=>x.e > nm), shown = up.slice(0,5), rest = up.length - shown.length;
+    var calHtml = `<section class="card tcal" aria-label="${L("Today in the calendar","Heute im Kalender")}"><div class="spread"><h3>${L("Today","Heute")}</h3><button type="button" class="ghost" data-daycal="${k}">${L("Day plan","Tagesplan")} ›</button></div>
+      ${shown.length ? `<ul class="agenda">${shown.map(x=>`<li class="${x.s<=nm?"now":""} ${x.tr?"tr":""}"><span class="at">${x.s<=nm?L("now","jetzt"):fmt(Math.max(x.s,0))}</span><span class="aw">${esc(x.t)}</span><span class="ae">${fmt(Math.min(x.e,1439))}</span></li>`).join("")}</ul>` : `<p class="small muted">${L("Nothing more in the calendar today.","Heute nichts mehr im Kalender.")}</p>`}
+      ${rest>0?`<button type="button" class="ghost amore" data-daycal="${k}">+${rest} ${L("more","weitere")}</button>`:""}</section>`; }
 
   // ---- hero: three dials, each explains itself on tap ----
   let why = "";
@@ -355,21 +361,23 @@ function renderToday(){
   // rings like MCI (Oti 23.10.: circles, not bars); one ink colour, rust only for red recovery
   const tile = (id, title, pct, col, val, sub, extra) => `<button type="button" class="btile" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why"><span class="bt">${title}</span><div class="rrow">${ring(pct, col, 76, 8, val, "", 19)}</div>${extra||""}<span class="bs">${sub}</span></button>`;
   const bsum = [R.score!=null?`${L("Recovery","Erholung")} ${R.score}%`:"", sm?`${L("Sleep","Schlaf")} ${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"", yStrain!=null?`Strain ${yStrain.toFixed(1)}`:"", `Protein ${prot}/${pt} g`].filter(Boolean).join(" · ");
-  const calmRing = (id, title, pct, col, val, sub) => `<button type="button" class="cring" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why">${ring(pct, col, 84, 7, val, "", 20)}<span class="crt">${title}</span><span class="crs">${sub}</span></button>`;
+  const calmRing = (id, title, pct, col, val, sub) => `<button type="button" class="cring" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why">${ring(pct, col, 72, 6, val, "", 18)}<span class="crt">${title}</span><span class="crs">${sub}</span></button>`;
   html += `<section class="card calm" aria-label="${L("Body today","Körper heute")}"><div class="crings">
     ${calmRing("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in","Check in") : ({g:L("green","grün"),y:L("yellow","gelb"),r:L("red","rot")})[R.level]||"")}
     ${calmRing("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`${L("deep","Tief")} ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("not synced","nicht da"))}
-    <div class="cring"><div>${ring(prot/pt, "var(--protein)", 84, 7, `${prot}`, "", 20)}</div><span class="crt">Protein</span><span class="crs">/ ${pt} g</span></div>
+    ${calmRing("strain", L("Strain","Strain"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target","Ziel")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}`)}
+    <div class="cring"><div>${ring(prot/pt, "var(--protein)", 72, 6, `${prot}`, "", 18)}</div><span class="crt">Protein</span><span class="crs">/ ${pt} g</span></div>
   </div>
   <div class="cprot">${[20,30,40].map(g=>`<button type="button" class="ghost" data-prot="${g}">+${g} g</button>`).join("")}<button type="button" class="ghost" data-prot="-10" aria-label="${L("Remove 10 g","10 g abziehen")}">−10</button></div>
   ${k >= (profile.creatineFrom||"9999") ? `<div class="ccrea"><div><b>${L("Creatine 5 g","Kreatin 5 g")}</b><span class="small muted">${lg.crea?L("taken today","heute genommen"):L("with a meal or water","zum Essen oder mit Wasser")}</span></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="${L("Creatine taken","Kreatin genommen")}">${CHECK_SVG}</button></div>` : ""}
   <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div></section>`;
-  more += `<button type="button" class="mrow" data-dial="strain" aria-expanded="${openDial==="strain"}" aria-controls="why"><span>${L("Strain yesterday","Strain gestern")}</span><b>${yStrain!=null?yStrain.toFixed(1):"–"}</b><span class="small muted">${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}</span></button>`;
+  html += calHtml;
+  // strain is a ring again (Oti 04.11.2026)
   // ---- morning briefing, read aloud on tap ----
-  if(briefing && briefing.date===k){
+  if(briefing && briefing.date===k && lg.bDone !== briefing.date){
     const lines = (briefing.lines && briefing.lines.length ? briefing.lines : String(briefing.text||"").split(/\n+/)).filter(Boolean);
     html += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum=""><div class="spread" style="flex-wrap:nowrap"><button type="button" class="btxt" id="briefTxt" aria-expanded="false" aria-controls="briefBody"><span class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</span><span class="small">${L("Show text","Text zeigen")} ›</span></button>
-      <button type="button" id="btnSpeak" class="primary play" aria-label="Read the briefing aloud">▶ Play</button></div>
+      <div class="row" style="gap:6px;flex-wrap:nowrap"><button type="button" id="btnSpeak" class="primary play" aria-label="Read the briefing aloud">▶ Play</button><button type="button" class="ghost" id="briefDone" aria-label="${L("Briefing done, hide for today","Briefing erledigt, heute ausblenden")}">${L("Done","Fertig")}</button></div></div>
       <div id="briefBody" hidden><div class="lines" data-notr style="margin-top:4px">${lines.map(x=>`<p>${esc(x.replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</p>`).join("")}</div>
       <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div></div>`;
   }
@@ -453,7 +461,7 @@ function renderToday(){
   more += rhythmCardHtml();
   more += tomorrowCardHtml();
   const moreOpen = foldGet("today-more-open");
-  html += `<details class="tmore" id="tMore" ${moreOpen?"open":""}><summary><span>${L("More today","Mehr heute")}</span><span class="small muted">${L("next, strain, movement, rhythm","Nächstes, Strain, Bewegung, Rhythmus")}</span></summary><div class="tmorein">${more}</div></details>`;
+  html += `<details class="tmore" id="tMore" ${moreOpen?"open":""}><summary><span>${L("More today","Mehr heute")}</span><span class="small muted">${L("movement, rhythm, tomorrow","Bewegung, Rhythmus, Morgen")}</span></summary><div class="tmorein">${more}</div></details>`;
   $("#v-today").innerHTML = html;
   { const st = $("#calmSt"); if(st) st.textContent = coachLine; }
   { const t = $("#tMore"); if(t) t.addEventListener("toggle", ()=>foldSet("today-more-open", t.open)); }
@@ -483,6 +491,10 @@ function renderToday(){
     const Y = logData.days[yk] = logData.days[yk]||{}; Y.j = {}; document.querySelectorAll("#v-today .jbtn.on").forEach(b=>Y.j[b.dataset.j] = true);
     render(); await saveDoc("log", logData); };
   const sp = $("#btnSpeak"); if(sp) sp.onclick = ()=>speakBriefing(sp);
+  const bd = $("#briefDone"); if(bd) bd.onclick = ()=>briefingDone();
   fillVoices();
   const mc = $("#mbCheck"); if(mc) mc.onclick = async ()=>{ const L = logData.days[k] = logData.days[k]||{}; L.mb = !L.mb; const m = microBreak(d); if(L.mb && m) L.mbEx = m.g; render(); await saveDoc("log", logData); };
 }
+
+// briefing done for today (Oti 04.11.2026): tapped "Done" or played to the end; it comes back with the next briefing
+async function briefingDone(){ if(!briefing || !briefing.date) return; const k = dateKey(new Date()); const L0 = logData.days[k] = logData.days[k]||{}; if(L0.bDone === briefing.date) return; L0.bDone = briefing.date; if(tab==="today"){ render(); } await saveDoc("log", logData); }
