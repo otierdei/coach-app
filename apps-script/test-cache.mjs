@@ -29,4 +29,6 @@ check("Drive file matches cache", JSON.parse(files["log.json"].content).version,
 cacheOn = false; r = call({action:"readAll"}); check("cache empty/expired -> Drive", r.docs.log.version, 7); cacheOn = true;
 ctx.clearDocCache(); before = driveReads; r = call({action:"readAll"}); check("after clearDocCache reads all from Drive", driveReads-before, 3);
 r = call({action:"write", doc:"tasks", data:{n:"tasks", t:[1]}, baseVersion:5}); r = call({action:"read", doc:"tasks"}); check("read single doc from cache", r.doc.version, 6);
+// slow Drive read finishing after a write must not put the older version back into the cache
+{ const v = JSON.parse(cache.get("doc:log")).version; ctx.cachePut_("log", {version: v-1, updatedAt:"old", data:{p:0}}); check("older version never replaces newer cache", JSON.parse(cache.get("doc:log")).version, v); }
 console.log(res.every(Boolean)?"\nALLE OK":`\n${res.filter(x=>!x).length} FEHLER`);

@@ -118,6 +118,9 @@ var CACHE_SEC = 21600;
 function cacheKey_(name) { return 'doc:' + name; }
 function cachePut_(name, rec) {
   try {
+    // never replace a newer cached version with an older one (a slow Drive read that started before a write)
+    var old = CacheService.getScriptCache().get(cacheKey_(name));
+    if (old) { var ov = JSON.parse(old).version; if (typeof ov === 'number' && ov > rec.version) return; }
     var s = JSON.stringify({version: rec.version, updatedAt: rec.updatedAt, data: rec.data});
     if (s.length < 95000) CacheService.getScriptCache().put(cacheKey_(name), s, CACHE_SEC);
     else CacheService.getScriptCache().remove(cacheKey_(name));
