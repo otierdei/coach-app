@@ -100,19 +100,6 @@ body.on-tasks nav.tabs button[aria-selected=true]{color:var(--ink)}
 .fseg button[aria-pressed=true]{color:var(--ink);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
 
 /* ---- Today: week strip, training hero, body tiles ---- */
-.wkstrip{background:var(--card);border-radius:22px;padding:12px 10px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}
-.wkstrip .wd{font-size:11px;font-weight:500;color:var(--muted)}
-.wkstrip .wd.now{color:var(--ink);font-weight:700}
-.wkstrip .dy{display:grid;justify-items:center;gap:4px;background:none;padding:0;min-height:0;border-radius:0}
-.wkstrip .dy{min-height:44px}
-.wkstrip .dy b{width:40px;height:40px;border-radius:999px;display:grid;place-items:center;font:600 14px var(--body);background:transparent;color:var(--ink)}
-.wkstrip .dy.past b{background:var(--card-2);color:var(--muted)}
-.wkstrip .dy.now b{box-shadow:inset 0 0 0 2px var(--accent);font-weight:700}
-.wkstrip .dy i{width:5px;height:5px;border-radius:9px;background:transparent}
-.wkstrip .dy.tr i{background:var(--muted)}
-.wkstrip .dy.now.tr i{background:var(--accent)}
-.wkstrip .dy.done b{background:color-mix(in srgb,var(--sage) 26%,transparent);color:var(--ink)}
-.wkstrip .dy.done i{background:var(--sage)}
 
 .thero{background:var(--hero);color:var(--hero-ink);gap:14px}
 .thero .eyebrow{color:var(--hero-accent)}
@@ -203,7 +190,6 @@ button.btile{border-radius:22px}
   nav.tabs button svg{width:20px;height:20px}
   #v-train{left:252px}
   .trfoot{left:268px}
-  .wkstrip .dy b{width:44px;height:44px}
   .btiles{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 

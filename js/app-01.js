@@ -90,21 +90,30 @@ async function loadDocs(){
 // L.pSum = the total this app last wrote. If L.protein differs from it, someone set the total from outside
 // (HQ inbox, "heute 140 g"): that total is kept through a correction entry whose id is the same on every device.
 function proteinSum(L){ return (L.pe||[]).reduce((a,e)=>a+(Number(e&&e.g)||0), 0); }
+function proteinMigrate(L){ if(!Array.isArray(L.pe)){ L.pe = L.protein ? [{id:"base", g:Number(L.protein)||0}] : []; L.pSum = proteinSum(L); } }
 function proteinAdd(L, g, dev){
-  if(!Array.isArray(L.pe)) L.pe = L.protein ? [{id:"base", g:Number(L.protein)||0}] : [];
-  const sum = proteinSum(L), add = Math.max(-sum, Number(g)||0);
+  proteinMigrate(L);
+  const sum = Math.max(0, proteinSum(L)), add = Math.max(-sum, Number(g)||0);
   if(add) L.pe.push({id: Date.now().toString(36)+Math.random().toString(36).slice(2,7), g:add, t:Date.now(), d:dev||""});
-  L.protein = L.pSum = Math.max(0, sum + add);
+  L.protein = L.pSum = Math.max(0, proteinSum(L));
 }
-function normProtein(log){
-  for(const L of Object.values((log && log.days) || {})){
-    if(!L || !Array.isArray(L.pe)) continue;
+// server: the normalized server copy during a merge. Its migration entry ("base") wins over a local one, because a
+// local one may come from a stale copy (review 03.11.).
+function normProtein(log, server){
+  for(const [k, L] of Object.entries((log && log.days) || {})){
+    if(!L || typeof L !== "object") continue;
+    if(L.protein != null && !Array.isArray(L.pe)) proteinMigrate(L);
+    if(!Array.isArray(L.pe)) continue;
+    const sb = server && server.days && server.days[k] && Array.isArray(server.days[k].pe) ? server.days[k].pe.find(e=>e && e.id==="base") : null;
+    if(sb){ const i = L.pe.findIndex(e=>e && e.id==="base"); if(i >= 0) L.pe[i] = {...sb}; }
     let sum = proteinSum(L);
     if(L.protein != null && L.pSum != null && Number(L.protein) !== Number(L.pSum) && Number(L.protein) !== sum){
       const adj = Math.max(-sum, (Number(L.protein)||0) - sum);
       const id = `adj:${L.pSum}>${L.protein}`;
       if(adj && !L.pe.some(e=>e && e.id===id)){ L.pe.push({id, g:adj, t:Date.now(), d:"set"}); sum += adj; }
     }
+    // two minus taps at the same time can push the sum below zero: a floor entry with a fixed id brings it back to 0
+    if(sum < 0){ const id = `floor:${L.pe.length}:${sum}`; if(!L.pe.some(e=>e && e.id===id)){ L.pe.push({id, g:-sum, t:Date.now(), d:"floor"}); sum = 0; } }
     L.protein = L.pSum = Math.max(0, sum);
   }
   return log;
