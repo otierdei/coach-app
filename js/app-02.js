@@ -362,12 +362,13 @@ function renderToday(){
     <div class="cring"><div>${ring(prot/pt, "var(--protein)", 84, 7, `${prot}`, "", 20)}</div><span class="crt">Protein</span><span class="crs">/ ${pt} g</span></div>
   </div>
   <div class="cprot">${[20,30,40].map(g=>`<button type="button" class="ghost" data-prot="${g}">+${g} g</button>`).join("")}<button type="button" class="ghost" data-prot="-10" aria-label="${L("Remove 10 g","10 g abziehen")}">−10</button></div>
+  ${k >= (profile.creatineFrom||"9999") ? `<div class="ccrea"><div><b>${L("Creatine 5 g","Kreatin 5 g")}</b><span class="small muted">${lg.crea?L("taken today","heute genommen"):L("with a meal or water","zum Essen oder mit Wasser")}</span></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="${L("Creatine taken","Kreatin genommen")}">${CHECK_SVG}</button></div>` : ""}
   <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div></section>`;
   more += `<button type="button" class="mrow" data-dial="strain" aria-expanded="${openDial==="strain"}" aria-controls="why"><span>${L("Strain yesterday","Strain gestern")}</span><b>${yStrain!=null?yStrain.toFixed(1):"–"}</b><span class="small muted">${L("target today","Ziel heute")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}${ySteps!=null?` · ${(ySteps/1000).toFixed(1)}k ${L("steps","Schritte")}`:""}</span></button>`;
   // ---- morning briefing, read aloud on tap ----
   if(briefing && briefing.date===k){
     const lines = (briefing.lines && briefing.lines.length ? briefing.lines : String(briefing.text||"").split(/\n+/)).filter(Boolean);
-    more += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum=""><div class="spread" style="flex-wrap:nowrap"><button type="button" class="btxt" id="briefTxt" aria-expanded="false" aria-controls="briefBody"><span class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</span><span class="small">${L("Show text","Text zeigen")} ›</span></button>
+    html += `<div class="card brief" data-fold="brief" data-ftitle="${L("Morning briefing","Morgenbriefing")}" data-fsum=""><div class="spread" style="flex-wrap:nowrap"><button type="button" class="btxt" id="briefTxt" aria-expanded="false" aria-controls="briefBody"><span class="eyebrow">Morning briefing${briefing.time?` · ${esc(briefing.time)}`:""}</span><span class="small">${L("Show text","Text zeigen")} ›</span></button>
       <button type="button" id="btnSpeak" class="primary play" aria-label="Read the briefing aloud">▶ Play</button></div>
       <div id="briefBody" hidden><div class="lines" data-notr style="margin-top:4px">${lines.map(x=>`<p>${esc(x.replace(/\[(Certain|Likely|Guessing)\]\s*/gi,""))}</p>`).join("")}</div>
       <label class="f" style="grid-template-columns:auto 1fr;align-items:center;gap:8px">Voice<select id="voiceSel" aria-label="Briefing voice"></select></label></div></div>`;
@@ -394,7 +395,7 @@ function renderToday(){
     : `<p class="small">${now.getDay()===6?"Your day off. Walk, family, no training guilt.":"Recovery is where the adaptation happens. A 20 to 30 min walk is plenty."}</p>${chgBtn}`}</div>
   </div>`;
 
-  if(k >= (profile.creatineFrom||"9999")) more += `<div class="card" style="gap:6px" data-fold="crea" data-ftitle="${L("Creatine 5 g","Kreatin 5 g")}" data-fsum="${lg.crea?L("taken ✓","genommen ✓"):L("open","offen")}"><div class="spread" style="flex-wrap:nowrap"><div><div style="font-weight:700">Creatine 5 g</div><div class="small muted">Daily with a meal or water, also on fast and rest days.</div></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="Creatine taken">${CHECK_SVG}</button></div></div>`;
+  // creatine sits under protein in the rings card (Oti 04.11.2026)
   // ---- movement break in the middle of deep work ----
   { const mb = microBreak(d);
     if(mb){ const done = !!lg.mb, red = R.level==="r";
@@ -451,7 +452,7 @@ function renderToday(){
   more += rhythmCardHtml();
   more += tomorrowCardHtml();
   const moreOpen = foldGet("today-more-open");
-  html += `<details class="tmore" id="tMore" ${moreOpen?"open":""}><summary><span>${L("More today","Mehr heute")}</span><span class="small muted">${L("next, briefing, creatine, strain","Nächstes, Briefing, Kreatin, Strain")}</span></summary><div class="tmorein">${more}</div></details>`;
+  html += `<details class="tmore" id="tMore" ${moreOpen?"open":""}><summary><span>${L("More today","Mehr heute")}</span><span class="small muted">${L("next, strain, movement, rhythm","Nächstes, Strain, Bewegung, Rhythmus")}</span></summary><div class="tmorein">${more}</div></details>`;
   $("#v-today").innerHTML = html;
   { const st = $("#calmSt"); if(st) st.textContent = coachLine; }
   { const t = $("#tMore"); if(t) t.addEventListener("toggle", ()=>foldSet("today-more-open", t.open)); }
