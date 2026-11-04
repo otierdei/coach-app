@@ -115,7 +115,9 @@
     while(true){
       const base = loaded.has(name) ? (versions[name] ?? 0) : -1;
       const r = await call("write", {doc:name, data, baseVersion: base});
-      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); delete pending[name]; LS.set("pending", pending); loaded.add(name); LS.set("base:"+name, data);
+      // only clear the queue if nothing newer was queued meanwhile (04.11.2026: two quick taps, e.g. +20 g then +30 g,
+      // lost the second one because the first write cleared it from the queue when it finished)
+      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); if(pending[name] === original){ delete pending[name]; LS.set("pending", pending); } loaded.add(name); LS.set("base:"+name, data);
         // the app must continue with what is now on the server, not with its older copy
         if(merged){ preMerge[name] = JSON.parse(JSON.stringify(original)); mergeEpoch[name] = (mergeEpoch[name]||0) + 1; LS.set("cache:"+name, data); try{ window.dispatchEvent(new CustomEvent("coach:merged", {detail:{name, data: JSON.parse(JSON.stringify(data))}})); }catch(e){} }
         return r; }
