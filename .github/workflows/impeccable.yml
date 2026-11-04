@@ -1,0 +1,19 @@
+name: Design check (Impeccable)
+# Standard since 04.11.2026: every push is scanned for typical AI design patterns.
+# Findings show as annotations on the commit; the check never blocks a deploy.
+on:
+  push:
+    branches: ["**"]
+    paths: ["**.html", "**.css", "**.js", ".github/workflows/impeccable.yml"]
+  workflow_dispatch:
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Scan for AI design patterns
+        run: npx -y impeccable@4.8.0 detect --github index.html theme.css styles.css desktop.css js/ || echo "Impeccable reported findings (see annotations)"
