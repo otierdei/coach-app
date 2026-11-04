@@ -110,6 +110,12 @@
   // as a whole: the write goes with an impossible base version, so the server answers with its current copy first.
   // (20.10.2026: a phone that had been offline kept a small local copy and overwrote the full log on the server.)
   const loaded = new Set(), mergeEpoch = {}, preMerge = {};
+  // newest version this device has seen per doc (own writes and server answers). A read that answers with an
+  // older version started before our last write: showing it would undo the change on screen (04.11.2026:
+  // protein back to the old total, task ticks jumping back until the next reload).
+  // kept in memory only: a new backend with fresh version numbers (planned move to Cloudflare) must never be ignored
+  const seen = {};
+  const see = (name, v) => { if(v != null && !(seen[name] >= v)) seen[name] = v; };
   async function writeDoc(name, data){
     let attempt = 0, merged = false; const original = data;
     while(true){
@@ -117,13 +123,13 @@
       const r = await call("write", {doc:name, data, baseVersion: base});
       // only clear the queue if nothing newer was queued meanwhile (04.11.2026: two quick taps, e.g. +20 g then +30 g,
       // lost the second one because the first write cleared it from the queue when it finished)
-      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); if(pending[name] === original){ delete pending[name]; LS.set("pending", pending); } loaded.add(name); LS.set("base:"+name, data);
+      if(r.ok){ versions[name] = r.version; LS.set("versions", versions); see(name, r.version); if(pending[name] === original){ delete pending[name]; LS.set("pending", pending); } loaded.add(name); LS.set("base:"+name, data);
         // the app must continue with what is now on the server, not with its older copy
         if(merged){ preMerge[name] = JSON.parse(JSON.stringify(original)); mergeEpoch[name] = (mergeEpoch[name]||0) + 1; LS.set("cache:"+name, data); try{ window.dispatchEvent(new CustomEvent("coach:merged", {detail:{name, data: JSON.parse(JSON.stringify(data))}})); }catch(e){} }
         return r; }
       if(r.conflict && attempt < 2){
         attempt++;
-        versions[name] = r.current?.version ?? 0;
+        versions[name] = r.current?.version ?? 0; see(name, r.current?.version);
         if(MERGE_DOCS.has(name) && r.current){ data = mergeDeep(r.current.data || {}, data); merged = true; loaded.add(name); continue; }
         if(PATCH_DOCS.has(name) && r.current){
           const base = LS.get("base:"+name);
@@ -170,8 +176,10 @@
           try{ const all = await readAllOnce(); rec = all[name] || null; }
           catch(e){ const c = pending[name] || LS.get("cache:"+name); return {exists: !!c, data: ()=>c}; }
           loaded.add(name);
+          // stale answer: a write of ours landed after this read started; keep our newer copy
+          if(rec && seen[name] > rec.version){ const c = pending[name] || LS.get("cache:"+name); if(c) return {exists:true, data:()=>c}; }
           const base = LS.get("base:"+name);
-          if(rec){ versions[name] = rec.version; LS.set("versions", versions); LS.set("cache:"+name, rec.data); LS.set("base:"+name, rec.data); }
+          if(rec){ versions[name] = rec.version; LS.set("versions", versions); see(name, rec.version); LS.set("cache:"+name, rec.data); LS.set("base:"+name, rec.data); }
           // an unsaved local change is shown on top of the server copy, never instead of it
           if(pending[name]){
             let p = pending[name];
