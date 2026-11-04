@@ -15,8 +15,8 @@
  * if the file changed in between, nothing is written and the answer is {ok:false, conflict:true, current}.
  * Scheduled Claude tasks cannot overwrite a Drive file (the Drive connector only creates files), so they
  * drop small change files into "Coach Data/inbox": <doc>--<yyyyMMdd-HHmmss>--<who>.json with
- * {doc, baseVersion, by, mode:"merge"|"set", data}. This script applies them in name order (every minute by trigger,
- * and before every read), bumps the version and moves the change file to "Coach Data/processed".
+ * {doc, baseVersion, by, mode:"merge"|"set", data}. This script applies them in name order (every minute by trigger;
+ * since 04.11.2026 no longer before every read, which made each app start slow), bumps the version and moves the change file to "Coach Data/processed".
  * mode "merge": objects are merged key by key, arrays and values replace, {"__delete__":true} removes a key.
  * mode "set": replaces the whole doc (briefing, monthly).
  * mode "patch": like merge, but a top level array of objects with "id" (e.g. tasks) is changed item by item:
@@ -68,8 +68,8 @@ function doPost(e) {
   try {
     switch (req.action) {
       case 'ping': return json_({ok: true, user: Session.getEffectiveUser().getEmail(), docs: listDocs_()});
-      case 'readAll': applyInbox(); return json_({ok: true, docs: readAll_()});
-      case 'read': applyInbox(); return json_({ok: true, doc: readDoc_(req.doc)});
+      case 'readAll': return json_({ok: true, docs: readAll_()});
+      case 'read': return json_({ok: true, doc: readDoc_(req.doc)});
       case 'write': return json_(writeDoc_(req.doc, req.data, req.baseVersion));
       case 'calendars': return json_({ok: true, calendars: calendars_()});
       case 'events': return json_({ok: true, events: events_(req.calendarId, req.startTime, req.endTime)});
@@ -110,18 +110,45 @@ function parseFile_(file) {
   if (typeof rec.version !== 'number') rec = {version: 1, updatedAt: null, data: rec};
   return rec;
 }
-function readDoc_(name) {
-  checkDoc_(name);
+/* Doc cache (04.11.2026): every doc also sits in the script cache, so reads skip Drive.
+   Every write in this script (app writes and inbox) goes through cachePut_ after the Drive file is written,
+   so the cache never runs ahead of Drive. A miss or an expired entry falls back to Drive.
+   Values over 100 KB cannot be cached and are always read from Drive. */
+var CACHE_SEC = 21600;
+function cacheKey_(name) { return 'doc:' + name; }
+function cachePut_(name, rec) {
+  try {
+    var s = JSON.stringify({version: rec.version, updatedAt: rec.updatedAt, data: rec.data});
+    if (s.length < 95000) CacheService.getScriptCache().put(cacheKey_(name), s, CACHE_SEC);
+    else CacheService.getScriptCache().remove(cacheKey_(name));
+  } catch (e) {}
+}
+function readDocDrive_(name) {
   var f = docFile_(name);
   if (!f) return null;
   var rec = parseFile_(f);
-  return {version: rec.version, updatedAt: rec.updatedAt, data: rec.data};
-}
-function readAll_() {
-  var out = {};
-  DOCS.forEach(function (n) { var r = readDoc_(n); if (r) out[n] = r; });
+  var out = {version: rec.version, updatedAt: rec.updatedAt, data: rec.data};
+  cachePut_(name, out);
   return out;
 }
+function readDoc_(name) {
+  checkDoc_(name);
+  try { var c = CacheService.getScriptCache().get(cacheKey_(name)); if (c) return JSON.parse(c); } catch (e) {}
+  return readDocDrive_(name);
+}
+function readAll_() {
+  var out = {}, hit = {};
+  try { hit = CacheService.getScriptCache().getAll(DOCS.map(cacheKey_)) || {}; } catch (e) {}
+  DOCS.forEach(function (n) {
+    var c = hit[cacheKey_(n)], r = null;
+    if (c) { try { r = JSON.parse(c); } catch (e) { r = null; } }
+    if (!r) r = readDocDrive_(n);
+    if (r) out[n] = r;
+  });
+  return out;
+}
+/** Run by hand if a doc file was ever changed directly in Drive: empties the cache. */
+function clearDocCache() { CacheService.getScriptCache().removeAll(DOCS.map(cacheKey_)); return 'cleared'; }
 function writeDoc_(name, data, baseVersion) {
   checkDoc_(name);
   if (data === undefined || data === null || typeof data !== 'object') throw new Error('data must be an object');
@@ -137,6 +164,7 @@ function writeDoc_(name, data, baseVersion) {
     var rec = {version: cur.version + 1, updatedAt: new Date().toISOString(), by: 'app', data: data};
     var body = JSON.stringify(rec);
     if (f) f.setContent(body); else dataFolder_().createFile(name + '.json', body, 'application/json');
+    cachePut_(name, rec);
     return {ok: true, version: rec.version, updatedAt: rec.updatedAt};
   } finally {
     lock.releaseLock();
@@ -193,6 +221,7 @@ function applyInbox() {
       var rec = {version: cur.version + 1, updatedAt: new Date().toISOString(), by: ch.by || 'task', data: data};
       var body = JSON.stringify(rec);
       if (df) df.setContent(body); else dataFolder_().createFile(name + '.json', body, 'application/json');
+      cachePut_(name, rec);
       f.setDescription('applied as version ' + rec.version + (ch.baseVersion != null && ch.baseVersion !== cur.version ? ' (written against ' + ch.baseVersion + ', merged)' : ''));
       f.moveTo(done);
       n++;
