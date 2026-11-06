@@ -429,3 +429,8 @@ body.on-tasks{background:var(--bg)}
 #v-today .brief > .spread{flex-wrap:wrap !important;row-gap:10px}
 #v-today .brief .btxt{flex:1 1 100%}
 #v-today .brief .row .play{flex:1}
+
+/* iPhone (06.11.2026): Safari zooms into any field with text under 16 px when it is tapped, and the Home Screen app
+   stays zoomed, so the page no longer fits the screen. Fields on touch screens use at least 16 px. */
+@media (pointer:coarse){ input,select,textarea{font-size:max(16px,1em) !important} }
+html,body{overflow-x:hidden}
