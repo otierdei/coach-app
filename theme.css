@@ -441,5 +441,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   section.view{grid-template-columns:minmax(0,1fr)}
   section.view > *{min-width:0;max-width:100%}
   .wrap{overflow-x:clip}
+  /* the "More today" box (Tomorrow card) was 400 px wide in Safari: its column grew with the content */
+  #v-today .tmorein{grid-template-columns:minmax(0,1fr)}
+  .tmorein > *, details.card > *, .card > *{min-width:0;max-width:100%}
+  #tomorrowCard{overflow:hidden;overflow-wrap:anywhere}
 }
 #layoutDiag{position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:99;background:#7a2e1f;color:#fff;font:600 12px/1.4 var(--body,system-ui);padding:10px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
