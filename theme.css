@@ -433,4 +433,13 @@ body.on-tasks{background:var(--bg)}
 /* iPhone (06.11.2026): Safari zooms into any field with text under 16 px when it is tapped, and the Home Screen app
    stays zoomed, so the page no longer fits the screen. Fields on touch screens use at least 16 px. */
 @media (pointer:coarse){ input,select,textarea{font-size:max(16px,1em) !important} }
-html,body{overflow-x:hidden}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* iPhone (06.11.2026): in Safari a page was laid out wider than the screen (cards cut off on the right, everything
+   zoomed out and small). Every page column is now exactly the screen width; anything still too wide is clipped
+   instead of widening the whole page. */
+@media (max-width:999px){
+  section.view{grid-template-columns:minmax(0,1fr)}
+  section.view > *{min-width:0;max-width:100%}
+  .wrap{overflow-x:clip}
+}
+#layoutDiag{position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:99;background:#7a2e1f;color:#fff;font:600 12px/1.4 var(--body,system-ui);padding:10px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
