@@ -68,9 +68,10 @@ function doPost(e) {
   try {
     switch (req.action) {
       case 'ping': return json_({ok: true, user: Session.getEffectiveUser().getEmail(), docs: listDocs_()});
-      case 'readAll': return json_({ok: true, docs: readAll_()});
-      case 'read': return json_({ok: true, doc: readDoc_(req.doc)});
-      case 'write': return json_(writeDoc_(req.doc, req.data, req.baseVersion));
+      // after the move to Cloudflare (DATA_ON_CF), devices that still talk to this script are passed through
+      case 'readAll': return json_(cfMode_() ? cfCall_({action: 'readAll'}) : {ok: true, docs: readAll_()});
+      case 'read': return json_(cfMode_() ? cfCall_({action: 'read', doc: req.doc}) : {ok: true, doc: readDoc_(req.doc)});
+      case 'write': return json_(cfMode_() ? cfCall_({action: 'write', doc: req.doc, data: req.data, baseVersion: req.baseVersion}) : writeDoc_(req.doc, req.data, req.baseVersion));
       case 'calendars': return json_({ok: true, calendars: calendars_()});
       case 'events': return json_({ok: true, events: events_(req.calendarId, req.startTime, req.endTime)});
       case 'createEvent': return json_({ok: true, event: createEvent_(req.event)});
@@ -218,6 +219,14 @@ function applyInbox() {
       var ch;
       try { ch = JSON.parse(f.getBlob().getDataAsString('UTF-8')); } catch (e) { f.setName('BAD ' + f.getName()); f.moveTo(done); return; }
       var name = ch.doc || f.getName().split('--')[0];
+      // result notices (07.11.2026) always live in Cloudflare; all docs do once DATA_ON_CF is set.
+      // A failed forward stays in the inbox and is tried again next minute (the worker applies each file once).
+      if ((name === 'notices' || cfMode_()) && isObj_(ch.data)) {
+        var res = cfCall_({action: 'inbox', file: f.getName(), doc: name, mode: ch.mode, data: ch.data, by: ch.by || 'task', pushBriefing: true});
+        if (res.ok) { f.setDescription('forwarded to cloudflare as version ' + res.version + (res.duplicate ? ' (already applied)' : '')); f.moveTo(done); n++; }
+        else f.setDescription('forward failed ' + new Date().toISOString() + ': ' + String(res.error || '').slice(0, 200));
+        return;
+      }
       if (DOCS.indexOf(name) < 0 || !isObj_(ch.data)) { f.setName('BAD ' + f.getName()); f.moveTo(done); return; }
       var df = docFile_(name), cur = df ? parseFile_(df) : {version: 0, data: {}};
       var data = ch.mode === 'set' ? ch.data : ch.mode === 'patch' ? patchById_(cur.data || {}, ch.data) : mergeDeep_(cur.data || {}, ch.data);
@@ -388,4 +397,58 @@ function driveDownload_(fileId) {
 
 function json_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ---------------- Cloudflare D1 as the doc store (phase 2, written 07.11.2026) ----------------
+   Order on the switch day (Mac browser, Apps Script editor):
+     1. migrateToCloudflare()   copies all Drive docs with their versions into D1 (keeps a newer D1 copy)
+     2. switchToCloudflare()    from now on reads, writes and the inbox go to Cloudflare; every 5 minutes
+                                mirrorFromCloudflare() writes changed docs back to Drive for the HQ runs
+     3. App: Setup > Data on Cloudflare on every device (devices that are not switched still work, through this script)
+   Way back: switchBackToDrive() mirrors one last time and turns the forwarding off. */
+function cfMode_() { return PropertiesService.getScriptProperties().getProperty('DATA_ON_CF') === '1'; }
+function cfCall_(body) {
+  body.key = PropertiesService.getScriptProperties().getProperty('KEY');
+  var r = UrlFetchApp.fetch(PUSH_URL + '/data', {method: 'post', contentType: 'text/plain', muteHttpExceptions: true, payload: JSON.stringify(body)});
+  try { return JSON.parse(r.getContentText()); } catch (e) { return {error: 'cloudflare answered ' + r.getResponseCode(), code: 'server_unavailable'}; }
+}
+function migrateToCloudflare() {
+  var docs = {};
+  DOCS.forEach(function (n) { var r = readDocDrive_(n); if (r) docs[n] = r; });
+  var res = cfCall_({action: 'import', docs: docs});
+  Logger.log(JSON.stringify(res));
+  var back = cfCall_({action: 'readAll'});
+  DOCS.forEach(function (n) {
+    var a = docs[n], b = back.docs && back.docs[n];
+    Logger.log(n + ': Drive ' + (a ? a.version : '-') + ', Cloudflare ' + (b ? b.version : '-') + (a && b && JSON.stringify(a.data) === JSON.stringify(b.data) ? ', same data' : ', DIFFERENT'));
+  });
+  return res;
+}
+function switchToCloudflare() {
+  applyInbox();
+  PropertiesService.getScriptProperties().setProperty('DATA_ON_CF', '1');
+  var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'mirrorFromCloudflare'; });
+  if (!has) ScriptApp.newTrigger('mirrorFromCloudflare').timeBased().everyMinutes(5).create();
+  return 'docs now on Cloudflare, Drive mirror every 5 minutes';
+}
+function switchBackToDrive() {
+  mirrorFromCloudflare();
+  PropertiesService.getScriptProperties().deleteProperty('DATA_ON_CF');
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'mirrorFromCloudflare') ScriptApp.deleteTrigger(t); });
+  return 'docs back on Drive. Switch the app back in Setup on every device.';
+}
+function mirrorFromCloudflare() {
+  var all = cfCall_({action: 'readAll'});
+  if (!all.ok) { Logger.log('mirror failed: ' + JSON.stringify(all).slice(0, 300)); return 0; }
+  var n = 0;
+  DOCS.forEach(function (name) {
+    var cf = all.docs[name]; if (!cf) return;
+    var f = docFile_(name), cur = f ? parseFile_(f) : {version: 0};
+    if (cf.version <= cur.version) return;
+    var rec = {version: cf.version, updatedAt: cf.updatedAt, by: 'cloudflare', data: cf.data};
+    var body = JSON.stringify(rec);
+    if (f) f.setContent(body); else dataFolder_().createFile(name + '.json', body, 'application/json');
+    cachePut_(name, rec); n++;
+  });
+  return n;
 }
