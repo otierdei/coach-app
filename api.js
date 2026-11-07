@@ -48,11 +48,15 @@
 
   const configured = () => !!(cfg && cfg.url && cfg.key);
 
+  // phase 2 (07.11.2026): the docs can live in Cloudflare D1 (push worker /data). Calendar and Drive stay on Apps Script.
+  // Switched per device in Setup; the worker carries over the Drive version numbers, so switching needs no reset.
+  const DATA_ACTIONS = new Set(["readAll","read","write"]);
+  const dataOnCf = () => LS.get("dataBackend") === "cf";
   async function call(action, params, {timeout=25000}={}){
     if(!configured()) throw Object.assign(new Error("not configured"), {code:"server_not_connected"});
     const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), timeout);
     try{
-      const r = await fetch(cfg.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+      const r = await fetch(DATA_ACTIONS.has(action) && dataOnCf() ? PUSH_URL + "/data" : cfg.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
         body: JSON.stringify({key:cfg.key, action, ...(params||{})}), signal: ctl.signal, redirect:"follow"});
       const txt = await r.text();
       let j; try{ j = JSON.parse(txt); }catch(e){ throw Object.assign(new Error("Backend answered without JSON. Is the web app deployed for \"Anyone\"?"), {code:"server_unavailable"}); }
@@ -363,5 +367,9 @@
 
   window.API = {db, mcp, sample, openCoach, coachUrl, configured, setupCard, bindSetup, call, flushPending, cal, assist,
     push: {subscribe: pushSubscribe, test: ()=>pushTest(), status: ()=>pushStatus(), url: PUSH_URL},
+    // results of the agents (trainer review, property scan, weekly report). Always in the worker, whatever the docs backend.
+    notices: {list: ()=>pushCall("/data", {key: cfg.key, action: "read", doc: "notices"}).then(r=>(r.doc && r.doc.data && r.doc.data.items) || []),
+              seen: id=>pushCall("/data", {key: cfg.key, action: "noticeSeen", id})},
+    backend: {get: ()=>dataOnCf() ? "cf" : "gas", set: v=>{ LS.set("dataBackend", v === "cf" ? "cf" : "gas"); }},
     status: ()=>({configured: configured(), online, pending: Object.keys(pending).length, lastErr}), DOCS};
 })();
