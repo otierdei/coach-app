@@ -15,7 +15,7 @@ const g = {
   CacheService:{getScriptCache(){return {get:()=>null, getAll:()=>({}), put(){}, remove(){}, removeAll(){}}}},
   LockService:{getScriptLock(){return {waitLock(){}, releaseLock(){}}}},
   ScriptApp:{getProjectTriggers:()=>triggers, newTrigger(h){ return {timeBased(){return {everyMinutes(){return {create(){triggers.push({getHandlerFunction:()=>h})}}}}}}}, deleteTrigger(t){ triggers.splice(triggers.indexOf(t),1); }},
-  UrlFetchApp:{fetch(url, o){ const out = o && o.payload ? cp.execFileSync("curl", ["-s","-X","POST","-H","Content-Type: text/plain","--data-binary","@-", url], {input:o.payload}).toString() : cp.execFileSync("curl", ["-s", url]).toString(); return {getContentText:()=>out, getResponseCode:()=>200}; }},
+  UrlFetchApp:{fetch(url, o){ g.fetches = (g.fetches||0) + 1; const out = o && o.payload ? cp.execFileSync("curl", ["-s","-X","POST","-H","Content-Type: text/plain","--data-binary","@-", url], {input:o.payload}).toString() : cp.execFileSync("curl", ["-s", url]).toString(); return {getContentText:()=>out, getResponseCode:()=>200}; }},
   Logger:{log:m=>g.logs.push(String(m))}, logs:[], Utilities:{}, Session:{}, CalendarApp:{}, ContentService:{createTextOutput:t=>({setMimeType(){return t}}), MimeType:{JSON:1}},
 };
 const run = new Function(...Object.keys(g), src + "\nreturn {doPost, applyInbox, migrateToCloudflare, switchToCloudflare, switchBackToDrive, mirrorFromCloudflare, readAll_};");
@@ -25,6 +25,8 @@ const post = b => JSON.parse(api.doPost({postData:{contents:JSON.stringify({key:
 const drive = n => JSON.parse(files.find(f=>f.folder==="data" && f.name===n+".json").content);
 const inbox = (name, obj) => files.push(mkFile(name, JSON.stringify(obj), "inbox"));
 
+// the worker only knows the key after /setup (the app does that when push is switched on)
+cp.execFileSync("curl",["-s","-X","POST","--data-binary",JSON.stringify({key:KEY}), W+"/setup"]);
 // Drive state like today
 files.push(mkFile("tasks.json", JSON.stringify({version:200, updatedAt:"x", data:{tasks:[{id:"t1", t:"Task"}]}}), "data"));
 files.push(mkFile("log.json", JSON.stringify({version:90, data:{days:{}}}), "data"));
@@ -41,7 +43,8 @@ ok(files.filter(f=>f.folder==="inbox").length === 0, "inbox empty");
 api.migrateToCloudflare();
 ok(g.logs.some(l=>/^tasks: Drive 201, Cloudflare 201, same data/.test(l)), "migrate tasks " + g.logs.filter(l=>/tasks/.test(l)));
 const setTarget = t => cp.execFileSync("curl",["-s","-X","POST","--data-binary",JSON.stringify({key:KEY, action:"setTarget", target:t}), W+"/data"]);
-setTarget("cf"); api.applyInbox();
+setTarget("cf"); g.fetches = 0; api.applyInbox();
+ok(g.fetches < 15, "no recursion in the switch (" + g.fetches + " requests)");
 ok(props.DATA_ON_CF === "1" && g.logs.some(l=>/docs now on Cloudflare/.test(l)), "switch through the target");
 { const h = JSON.parse(cp.execFileSync("curl",["-s", W+"/health"]).toString()); ok(h.dataLive === true, "dataLive set"); }
 // 3. a device that is not switched still reads and writes, through the script

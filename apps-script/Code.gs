@@ -410,7 +410,13 @@ function json_(o) {
    Way back: switchBackToDrive() mirrors one last time and turns the forwarding off. */
 /* The switch is set in the worker (POST /data setTarget cf|drive) and carried out here by the minute trigger,
    so nobody has to run a function in the editor. While on Cloudflare, Drive gets a mirror every 5 minutes. */
+var SWITCH_RUNNING_ = false;
 function cfSwitchCheck_() {
+  if (SWITCH_RUNNING_) return;
+  SWITCH_RUNNING_ = true;
+  try { cfSwitchCheckOnce_(); } finally { SWITCH_RUNNING_ = false; }
+}
+function cfSwitchCheckOnce_() {
   var r = UrlFetchApp.fetch(PUSH_URL + '/health', {muteHttpExceptions: true}), h = {};
   try { h = JSON.parse(r.getContentText()); } catch (e) { return; }
   var p = PropertiesService.getScriptProperties();
@@ -439,8 +445,9 @@ function migrateToCloudflare() {
   });
   return res;
 }
+// called from the minute run (applyInbox), never the other way round: no applyInbox in here (07.11.2026: that
+// recursion kept the minute runs busy). Inbox files that are still waiting go to Cloudflare right after the switch.
 function switchToCloudflare() {
-  applyInbox();
   var p = PropertiesService.getScriptProperties(), lock = LockService.getScriptLock(), res;
   lock.waitLock(30000);
   try {
