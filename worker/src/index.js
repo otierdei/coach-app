@@ -15,8 +15,11 @@
                  (23.10.2026) turns one spoken sentence into a calendar change proposal with Claude.
                  Needs the secret ANTHROPIC_API_KEY on this worker. The app shows the proposal and only
                  writes to Google Calendar after Oti taps "Add"; the worker never touches the calendar.
+     /data       {key, action, ...}                     -> coach docs in D1 (phase 2, 07.11.2026), see data.js.
+                 Same request and answer shapes as the Apps Script doPost for readAll, read and write.
    GET /health -> {ok}   GET /vapid -> {publicKey} */
 import { newVapidKeys, sendPush } from "./webpush.js";
+import { readAll, readDoc, writeDoc, applyChange, importDocs, newNotices, briefingPushText } from "./data.js";
 
 const SUBJECT = "https://otierdei.github.io/coach-app/";
 const ORIGINS = ["https://otierdei.github.io"];
@@ -183,6 +186,41 @@ async function doPush(env, body) {
   return { ok: delivered > 0, sent: subs.length, delivered, removed, results };
 }
 
+async function doData(env, b) {
+  switch (b.action) {
+    case "ping": return { ok: true, app: "coach-data" };
+    case "readAll": return { ok: true, docs: await readAll(env) };
+    case "read": return { ok: true, doc: await readDoc(env, b.doc) };
+    case "write": return await writeDoc(env, b.doc, b.data, b.baseVersion);
+    case "import": return { ok: true, result: await importDocs(env, b.docs, b.force === true) };
+    case "noticeSeen": {
+      const r = await applyChange(env, { doc: "notices", mode: "patch", by: "app", data: { items: [{ id: String(b.id), seenAt: new Date().toISOString() }] } });
+      return { ok: true, version: r.version };
+    }
+    case "inbox": {
+      const r = await applyChange(env, { file: b.file, doc: b.doc, mode: b.mode, data: b.data, by: b.by });
+      const pushes = [];
+      if (!r.duplicate && r.doc === "notices") {
+        for (const n of newNotices(r.before, r.after).slice(0, 3)) {
+          const p = await doPush(env, { title: String(n.title || "Neues Ergebnis"), body: String(n.summary || ""), tag: "notice", url: "./?notice=" + encodeURIComponent(n.id), by: "notice " + n.id });
+          pushes.push({ id: n.id, delivered: p.delivered || 0 });
+        }
+      }
+      // one push per new briefing (date + time), like pushBriefing_ in Code.gs, once Apps Script forwards the inbox here
+      if (!r.duplicate && r.doc === "briefing" && b.pushBriefing === true && r.after) {
+        const tag = String(r.after.date || "") + " " + String(r.after.time || "");
+        if ((await cfgGet(env, "last_brief_push")) !== tag) {
+          await cfgSet(env, "last_brief_push", tag);
+          const p = await doPush(env, { title: r.after.title || "Morning briefing", body: briefingPushText(r.after), tag: "briefing", url: "./", by: "briefing" });
+          pushes.push({ id: "briefing", delivered: p.delivered || 0 });
+        }
+      }
+      return { ok: true, doc: r.doc, version: r.version, duplicate: !!r.duplicate, pushes };
+    }
+    default: return { error: "unknown action" };
+  }
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -236,6 +274,7 @@ export default {
         return json(req, { ok: true });
       }
       if (url.pathname === "/push") return json(req, await doPush(env, body));
+      if (url.pathname === "/data") return json(req, await doData(env, body));
       if (url.pathname === "/assistant") return json(req, await doAssist(env, body));
       if (url.pathname === "/status") {
         const { results: subs } = await env.DB.prepare("SELECT device, created, seen, last_ok, last_status, fails, substr(endpoint, 1, 40) AS host FROM subs").all();
