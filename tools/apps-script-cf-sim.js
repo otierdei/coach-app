@@ -15,7 +15,7 @@ const g = {
   CacheService:{getScriptCache(){return {get:()=>null, getAll:()=>({}), put(){}, remove(){}, removeAll(){}}}},
   LockService:{getScriptLock(){return {waitLock(){}, releaseLock(){}}}},
   ScriptApp:{getProjectTriggers:()=>triggers, newTrigger(h){ return {timeBased(){return {everyMinutes(){return {create(){triggers.push({getHandlerFunction:()=>h})}}}}}}}, deleteTrigger(t){ triggers.splice(triggers.indexOf(t),1); }},
-  UrlFetchApp:{fetch(url, o){ const out = cp.execFileSync("curl", ["-s","-X","POST","-H","Content-Type: text/plain","--data-binary","@-", url], {input:o.payload}).toString(); return {getContentText:()=>out, getResponseCode:()=>200}; }},
+  UrlFetchApp:{fetch(url, o){ const out = o && o.payload ? cp.execFileSync("curl", ["-s","-X","POST","-H","Content-Type: text/plain","--data-binary","@-", url], {input:o.payload}).toString() : cp.execFileSync("curl", ["-s", url]).toString(); return {getContentText:()=>out, getResponseCode:()=>200}; }},
   Logger:{log:m=>g.logs.push(String(m))}, logs:[], Utilities:{}, Session:{}, CalendarApp:{}, ContentService:{createTextOutput:t=>({setMimeType(){return t}}), MimeType:{JSON:1}},
 };
 const run = new Function(...Object.keys(g), src + "\nreturn {doPost, applyInbox, migrateToCloudflare, switchToCloudflare, switchBackToDrive, mirrorFromCloudflare, readAll_};");
@@ -40,7 +40,9 @@ ok(files.filter(f=>f.folder==="inbox").length === 0, "inbox empty");
 // 2. migrate and switch
 api.migrateToCloudflare();
 ok(g.logs.some(l=>/^tasks: Drive 201, Cloudflare 201, same data/.test(l)), "migrate tasks " + g.logs.filter(l=>/tasks/.test(l)));
-ok(/docs now on Cloudflare/.test(api.switchToCloudflare()) && triggers.length === 1, "switch");
+const setTarget = t => cp.execFileSync("curl",["-s","-X","POST","--data-binary",JSON.stringify({key:KEY, action:"setTarget", target:t}), W+"/data"]);
+setTarget("cf"); api.applyInbox();
+ok(props.DATA_ON_CF === "1" && g.logs.some(l=>/docs now on Cloudflare/.test(l)), "switch through the target");
 { const h = JSON.parse(cp.execFileSync("curl",["-s", W+"/health"]).toString()); ok(h.dataLive === true, "dataLive set"); }
 // 3. a device that is not switched still reads and writes, through the script
 let r = post({action:"readAll"}); ok(r.ok && r.docs.tasks.version === 201, "proxied readAll");
@@ -48,11 +50,13 @@ r = post({action:"write", doc:"tasks", data:{tasks:[{id:"t1", t:"Task 2"}]}, bas
 r = post({action:"write", doc:"tasks", data:{tasks:[]}, baseVersion:201}); ok(r.conflict === true, "proxied conflict");
 // 4. inbox now goes to Cloudflare; Drive gets the mirror
 inbox("tasks--b.json", {doc:"tasks", mode:"patch", data:{tasks:[{id:"t2", t:"New"}]}});
-api.applyInbox();
+props.LAST_MIRROR = String(Date.now()); api.applyInbox();
 ok(drive("tasks").version === 201, "Drive not written directly after switch");
-ok(api.mirrorFromCloudflare() >= 1 && drive("tasks").version === 203 && drive("tasks").data.tasks.length === 2 && drive("tasks").by === "cloudflare", "mirror " + drive("tasks").version);
+props.LAST_MIRROR = "0"; api.applyInbox();
+ok(drive("tasks").version === 203 && drive("tasks").data.tasks.length === 2 && drive("tasks").by === "cloudflare", "mirror " + drive("tasks").version);
 // 5. way back
-ok(/back on Drive/.test(api.switchBackToDrive()) && triggers.length === 0, "switch back");
+setTarget("drive"); api.applyInbox();
+ok(!props.DATA_ON_CF && g.logs.some(l=>/back on Drive/.test(l)), "switch back through the target");
 { const h = JSON.parse(cp.execFileSync("curl",["-s", W+"/health"]).toString()); ok(h.dataLive === false, "dataLive cleared"); }
 r = post({action:"readAll"}); ok(r.docs.tasks.version === 203, "Drive serves again with the mirrored version");
 console.log(`apps script sim: ${pass} passed, ${fail} failed`); process.exit(fail?1:0);

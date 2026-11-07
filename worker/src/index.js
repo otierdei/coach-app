@@ -189,6 +189,8 @@ async function doPush(env, body) {
 async function doData(env, b) {
   switch (b.action) {
     case "ping": return { ok: true, app: "coach-data" };
+    // the wish; the Apps Script minute trigger carries it out (import under lock, then setLive)
+    case "setTarget": await cfgSet(env, "data_target", b.target === "cf" ? "cf" : "drive"); return { ok: true, dataTarget: b.target === "cf" ? "cf" : "drive" };
     case "setLive": await cfgSet(env, "data_live", b.live === true ? "1" : "0"); return { ok: true, dataLive: b.live === true };
     case "readAll": return { ok: true, docs: await readAll(env) };
     case "read": return { ok: true, doc: await readDoc(env, b.doc) };
@@ -232,7 +234,7 @@ export default {
       if (req.method === "GET" && url.pathname === "/health") {
         const set = !!(await cfgGet(env, "key_hash"));
         // dataLive: the one switch for all devices (07.11.2026). true = the app reads and writes its docs here.
-        return json(req, { ok: true, app: "coach-push", keySet: set, dataLive: (await cfgGet(env, "data_live")) === "1" });
+        return json(req, { ok: true, app: "coach-push", keySet: set, dataLive: (await cfgGet(env, "data_live")) === "1", dataTarget: (await cfgGet(env, "data_target")) || "drive" });
       }
       if (req.method === "GET" && url.pathname === "/vapid") return json(req, { publicKey: (await vapid(env)).publicKey });
       if (req.method !== "POST") return json(req, { error: "not found" }, 404);

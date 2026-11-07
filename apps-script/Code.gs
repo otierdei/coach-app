@@ -207,6 +207,7 @@ function patchById_(base, patch) {
   return out;
 }
 function applyInbox() {
+  try { cfSwitchCheck_(); } catch (e) { Logger.log('switch check: ' + e); }
   var inbox = subFolder_('inbox'), files = [], it = inbox.getFiles();
   while (it.hasNext()) files.push(it.next());
   if (!files.length) return 0;
@@ -407,6 +408,19 @@ function json_(o) {
      3. The apps read the switch (worker /health dataLive) on their next start; a device that still talks to this
         script is passed through to Cloudflare, so nothing can be written to Drive by mistake
    Way back: switchBackToDrive() mirrors one last time and turns the forwarding off. */
+/* The switch is set in the worker (POST /data setTarget cf|drive) and carried out here by the minute trigger,
+   so nobody has to run a function in the editor. While on Cloudflare, Drive gets a mirror every 5 minutes. */
+function cfSwitchCheck_() {
+  var r = UrlFetchApp.fetch(PUSH_URL + '/health', {muteHttpExceptions: true}), h = {};
+  try { h = JSON.parse(r.getContentText()); } catch (e) { return; }
+  var p = PropertiesService.getScriptProperties();
+  if (h.dataTarget === 'cf' && !cfMode_()) Logger.log(switchToCloudflare());
+  else if (h.dataTarget === 'drive' && cfMode_()) Logger.log(switchBackToDrive());
+  if (cfMode_()) {
+    var last = Number(p.getProperty('LAST_MIRROR') || 0);
+    if (Date.now() - last >= 4.5 * 60000) { p.setProperty('LAST_MIRROR', String(Date.now())); mirrorFromCloudflare(); }
+  }
+}
 function cfMode_() { return PropertiesService.getScriptProperties().getProperty('DATA_ON_CF') === '1'; }
 function cfCall_(body) {
   body.key = PropertiesService.getScriptProperties().getProperty('KEY');
@@ -437,17 +451,14 @@ function switchToCloudflare() {
     if (!res.ok) throw new Error('import failed: ' + JSON.stringify(res).slice(0, 300));
     p.setProperty('DATA_ON_CF', '1');
   } finally { lock.releaseLock(); }
-  var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'mirrorFromCloudflare'; });
-  if (!has) ScriptApp.newTrigger('mirrorFromCloudflare').timeBased().everyMinutes(5).create();
   cfCall_({action: 'setLive', live: true});   // every app reads this switch on start
   Logger.log(JSON.stringify(res.result));
-  return 'docs now on Cloudflare, Drive mirror every 5 minutes';
+  return 'docs now on Cloudflare, Drive mirror every 5 minutes (minute trigger)';
 }
 function switchBackToDrive() {
   cfCall_({action: 'setLive', live: false});
   mirrorFromCloudflare();
   PropertiesService.getScriptProperties().deleteProperty('DATA_ON_CF');
-  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'mirrorFromCloudflare') ScriptApp.deleteTrigger(t); });
   return 'docs back on Drive. Apps switch back on their next start.';
 }
 function mirrorFromCloudflare() {
