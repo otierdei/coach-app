@@ -52,8 +52,19 @@
   // Switched per device in Setup; the worker carries over the Drive version numbers, so switching needs no reset.
   const DATA_ACTIONS = new Set(["readAll","read","write"]);
   const dataOnCf = () => LS.get("dataBackend") === "cf";
+  // one switch for all devices: the worker says where the docs live (GET /health dataLive). Checked once per page
+  // load before the first doc request; if the worker cannot be reached, the last known choice stays.
+  let liveCheck = null;
+  function checkLive(){
+    if(!liveCheck) liveCheck = Promise.race([
+      fetch(PUSH_URL + "/health", {cache: "no-store"}).then(r=>r.json()).then(j=>{ if(typeof j.dataLive === "boolean") LS.set("dataBackend", j.dataLive ? "cf" : "gas"); }),
+      new Promise(r=>setTimeout(r, 3000))
+    ]).catch(()=>{});
+    return liveCheck;
+  }
   async function call(action, params, {timeout=25000}={}){
     if(!configured()) throw Object.assign(new Error("not configured"), {code:"server_not_connected"});
+    if(DATA_ACTIONS.has(action)) await checkLive();
     const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), timeout);
     try{
       const r = await fetch(DATA_ACTIONS.has(action) && dataOnCf() ? PUSH_URL + "/data" : cfg.url, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},

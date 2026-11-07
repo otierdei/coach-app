@@ -404,7 +404,8 @@ function json_(o) {
      1. migrateToCloudflare()   copies all Drive docs with their versions into D1 (keeps a newer D1 copy)
      2. switchToCloudflare()    from now on reads, writes and the inbox go to Cloudflare; every 5 minutes
                                 mirrorFromCloudflare() writes changed docs back to Drive for the HQ runs
-     3. App: Setup > Data on Cloudflare on every device (devices that are not switched still work, through this script)
+     3. The apps read the switch (worker /health dataLive) on their next start; a device that still talks to this
+        script is passed through to Cloudflare, so nothing can be written to Drive by mistake
    Way back: switchBackToDrive() mirrors one last time and turns the forwarding off. */
 function cfMode_() { return PropertiesService.getScriptProperties().getProperty('DATA_ON_CF') === '1'; }
 function cfCall_(body) {
@@ -426,16 +427,28 @@ function migrateToCloudflare() {
 }
 function switchToCloudflare() {
   applyInbox();
-  PropertiesService.getScriptProperties().setProperty('DATA_ON_CF', '1');
+  var p = PropertiesService.getScriptProperties(), lock = LockService.getScriptLock(), res;
+  lock.waitLock(30000);
+  try {
+    // last copy of every Drive doc under the same lock app writes use, so nothing written in between is lost
+    var docs = {};
+    DOCS.forEach(function (n) { var r = readDocDrive_(n); if (r) docs[n] = r; });
+    res = cfCall_({action: 'import', docs: docs});
+    if (!res.ok) throw new Error('import failed: ' + JSON.stringify(res).slice(0, 300));
+    p.setProperty('DATA_ON_CF', '1');
+  } finally { lock.releaseLock(); }
   var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'mirrorFromCloudflare'; });
   if (!has) ScriptApp.newTrigger('mirrorFromCloudflare').timeBased().everyMinutes(5).create();
+  cfCall_({action: 'setLive', live: true});   // every app reads this switch on start
+  Logger.log(JSON.stringify(res.result));
   return 'docs now on Cloudflare, Drive mirror every 5 minutes';
 }
 function switchBackToDrive() {
+  cfCall_({action: 'setLive', live: false});
   mirrorFromCloudflare();
   PropertiesService.getScriptProperties().deleteProperty('DATA_ON_CF');
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'mirrorFromCloudflare') ScriptApp.deleteTrigger(t); });
-  return 'docs back on Drive. Switch the app back in Setup on every device.';
+  return 'docs back on Drive. Apps switch back on their next start.';
 }
 function mirrorFromCloudflare() {
   var all = cfCall_({action: 'readAll'});

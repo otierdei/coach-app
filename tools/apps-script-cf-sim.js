@@ -41,6 +41,7 @@ ok(files.filter(f=>f.folder==="inbox").length === 0, "inbox empty");
 api.migrateToCloudflare();
 ok(g.logs.some(l=>/^tasks: Drive 201, Cloudflare 201, same data/.test(l)), "migrate tasks " + g.logs.filter(l=>/tasks/.test(l)));
 ok(/docs now on Cloudflare/.test(api.switchToCloudflare()) && triggers.length === 1, "switch");
+{ const h = JSON.parse(cp.execFileSync("curl",["-s", W+"/health"]).toString()); ok(h.dataLive === true, "dataLive set"); }
 // 3. a device that is not switched still reads and writes, through the script
 let r = post({action:"readAll"}); ok(r.ok && r.docs.tasks.version === 201, "proxied readAll");
 r = post({action:"write", doc:"tasks", data:{tasks:[{id:"t1", t:"Task 2"}]}, baseVersion:201}); ok(r.ok && r.version === 202, "proxied write " + JSON.stringify(r));
@@ -52,5 +53,6 @@ ok(drive("tasks").version === 201, "Drive not written directly after switch");
 ok(api.mirrorFromCloudflare() >= 1 && drive("tasks").version === 203 && drive("tasks").data.tasks.length === 2 && drive("tasks").by === "cloudflare", "mirror " + drive("tasks").version);
 // 5. way back
 ok(/back on Drive/.test(api.switchBackToDrive()) && triggers.length === 0, "switch back");
+{ const h = JSON.parse(cp.execFileSync("curl",["-s", W+"/health"]).toString()); ok(h.dataLive === false, "dataLive cleared"); }
 r = post({action:"readAll"}); ok(r.docs.tasks.version === 203, "Drive serves again with the mirrored version");
 console.log(`apps script sim: ${pass} passed, ${fail} failed`); process.exit(fail?1:0);

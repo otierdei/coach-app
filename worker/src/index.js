@@ -189,6 +189,7 @@ async function doPush(env, body) {
 async function doData(env, b) {
   switch (b.action) {
     case "ping": return { ok: true, app: "coach-data" };
+    case "setLive": await cfgSet(env, "data_live", b.live === true ? "1" : "0"); return { ok: true, dataLive: b.live === true };
     case "readAll": return { ok: true, docs: await readAll(env) };
     case "read": return { ok: true, doc: await readDoc(env, b.doc) };
     case "write": return await writeDoc(env, b.doc, b.data, b.baseVersion);
@@ -230,7 +231,8 @@ export default {
     try {
       if (req.method === "GET" && url.pathname === "/health") {
         const set = !!(await cfgGet(env, "key_hash"));
-        return json(req, { ok: true, app: "coach-push", keySet: set });
+        // dataLive: the one switch for all devices (07.11.2026). true = the app reads and writes its docs here.
+        return json(req, { ok: true, app: "coach-push", keySet: set, dataLive: (await cfgGet(env, "data_live")) === "1" });
       }
       if (req.method === "GET" && url.pathname === "/vapid") return json(req, { publicKey: (await vapid(env)).publicKey });
       if (req.method !== "POST") return json(req, { error: "not found" }, 404);
