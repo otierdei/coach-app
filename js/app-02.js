@@ -327,7 +327,7 @@ function renderToday(){
   const blockTxt = w<1 ? `Block 1 starts ${fromKey(profile.blockStart).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}` : w>12 ? "Block complete" : `Week ${w}/12${DELOAD(w)?" · deload":""}`;
   // A Calm Glance (Oti 04.11.2026): big date, one status sentence, three rings, Top 3, training; the rest under "More today"
   let more = "";
-  let html = `<header class="calmhd"><div class="spread" style="align-items:flex-start;flex-wrap:nowrap"><div><div class="eyebrow">${esc(blockTxt)}</div><h1 class="calmdate">${now.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long"})}<br>${now.toLocaleDateString(L("en-GB","de-DE"),{day:"numeric",month:"long"})}</h1></div><button type="button" class="ghost fall" id="foldAll"></button></div><p class="calmst" id="calmSt"></p></header>`;
+  let html = `<header class="calmhd"><div class="spread" style="align-items:flex-start;flex-wrap:nowrap"><div><h2 class="calmdate">${now.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long"})}<br>${now.toLocaleDateString(L("en-GB","de-DE"),{day:"numeric",month:"long"})}</h2><p class="calmwk">${esc(blockTxt)}</p></div><button type="button" class="ghost fall" id="foldAll"></button></div><p class="calmst" id="calmSt"></p></header>`;
   if(calState.status==="err") html += `<div class="banner y">${esc(calState.msg)}</div>`;
   // next thing today (Oti 23.10.): one line instead of reading the day plan
   { const nm = now.getHours()*60 + now.getMinutes(), hide = typeof WK_HIDE !== "undefined" ? WK_HIDE : /lunch|dinner|mittag|abendessen/i;

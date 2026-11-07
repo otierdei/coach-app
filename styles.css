@@ -362,7 +362,7 @@ header.top > .row{flex-wrap:nowrap;gap:6px!important}
 .pw-dots span{height:14px;border-radius:5px;background:var(--pw-line)}
 .pw-dots span.on{background:var(--pw-done)} .pw-dots span.off{background:transparent;border:1px dashed var(--pw-line)}
 .pw-dots span.today{outline:1.5px solid var(--pw-ink);outline-offset:1px}
-.pw-dh{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-width:260px;font-size:10.5px;color:var(--pw-muted);text-align:center}
+.pw-dh{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-width:260px;font-size:11px;color:var(--pw-muted);text-align:center}
 /* rule grid */
 .pw-rule{display:grid;gap:10px}
 .pw-row{--c:var(--pw-prayer);background:var(--pw-card);border-radius:18px;padding:14px 14px 14px 14px;display:grid;gap:10px}
@@ -404,7 +404,7 @@ header.top > .row{flex-wrap:nowrap;gap:6px!important}
 .pw-scale button{width:44px;height:44px;padding:0;border-radius:50%;background:var(--pw-bg);color:var(--pw-ink);border:1.5px solid var(--pw-line)}
 .pw-scale button[aria-pressed="true"]{background:var(--pw-goal);color:#fff;border-color:var(--pw-goal)}
 .pw-bars{display:flex;align-items:flex-end;gap:6px;height:64px}
-.pw-bars div{flex:1;display:grid;gap:3px;justify-items:center;font-size:10.5px;color:var(--pw-muted)}
+.pw-bars div{flex:1;display:grid;gap:3px;justify-items:center;font-size:11px;color:var(--pw-muted)}
 .pw-bars i{display:block;width:100%;max-width:26px;border-radius:5px 5px 2px 2px;background:var(--pw-goal)}
 .ptw textarea{background:var(--pw-bg);border-color:var(--pw-line);color:var(--pw-ink);width:100%;min-height:70px;font-family:var(--pw-font)}
 /* music (app style) */
