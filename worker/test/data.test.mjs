@@ -56,10 +56,12 @@ r = await data("inbox", { file: "notices--1.json", doc: "notices", mode: "patch"
 ok(r.ok && r.pushes.length === 1 && r.pushes[0].id === "trainer-2026-11-07", "notice push " + JSON.stringify(r));
 r = await data("inbox", { file: "notices--2.json", doc: "notices", mode: "patch", data: { items: [{ id: "immo-2026-11-07", source: "immo", title: "Immobilienscan", summary: "2 neue Objekte", link: "https://docs.google.com/document/d/x" }] } });
 ok(r.pushes.length === 1 && r.pushes[0].id === "immo-2026-11-07", "second notice pushes only itself");
+r = await data("inbox", { file: "notices--3.json", doc: "notices", mode: "patch", data: { items: [{ id: "weekly-2026-11-09", source: "weekly", title: "Wochenbericht", push: false }] } });
+ok(r.ok && r.pushes.length === 0, "push false stays silent");
 r = await data("noticeSeen", { id: "trainer-2026-11-07" });
 r = await data("read", { doc: "notices" });
 const it = r.doc.data.items;
-ok(it.length === 2 && it[0].seenAt && !it[1].seenAt && it[0].body === "## 1\nText", "seen marks one");
+ok(it.length === 3 && it[0].seenAt && !it[1].seenAt && it[0].body === "## 1\nText", "seen marks one");
 r = await data("readAll");
 ok(Object.keys(r.docs).sort().join() === "briefing,log,notices,profile,tasks", "readAll lists docs " + Object.keys(r.docs));
 const st = await post("/status", { key: KEY });

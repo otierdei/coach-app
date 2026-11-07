@@ -114,7 +114,8 @@ export async function importDocs(env, docs, force) {
    New ids (not in the doc before) get one push that opens the app at that notice. */
 export function newNotices(before, after) {
   const had = new Set(((before && before.items) || []).map(o => o && o.id));
-  return ((after && after.items) || []).filter(o => isObj(o) && o.id != null && !had.has(o.id) && !o.seenAt);
+  // push: false = the card waits silently in the app (weekly run at 06:15, before Oti is up)
+  return ((after && after.items) || []).filter(o => isObj(o) && o.id != null && !had.has(o.id) && !o.seenAt && o.push !== false);
 }
 export function briefingPushText(data) {
   const lines = (data.lines || []).map(l => String(l).replace(/\s*\[(Certain|Likely|Guessing)\]/g, ""));

@@ -6,7 +6,8 @@
 "use strict";
 const NT_SRC = {trainer: ["Trainer", "Trainer", "M4 12h2m12 0h2M7 8v8m10-8v8M9 12h6"],
   immo: ["Property scan", "Immobilienscan", "M4 11l8-6 8 6v8H4z M10 19v-5h4v5"],
-  weekly: ["Weekly report", "Wochenbericht", "M5 5h14v14H5z M5 9h14 M9 13h6"]};
+  weekly: ["Weekly report", "Wochenbericht", "M5 5h14v14H5z M5 9h14 M9 13h6"],
+  monthly: ["Workload review", "Auslastung", "M12 4a8 8 0 1 0 8 8h-8z M14 3v7h7"]};
 let ntItems = (()=>{ try{ return JSON.parse(localStorage.getItem("ohc-notices") || "[]"); }catch(e){ return []; } })();
 let ntOpenId = new URLSearchParams(location.search).get("notice");
 if(ntOpenId) history.replaceState(null, "", location.pathname);
