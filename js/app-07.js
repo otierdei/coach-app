@@ -56,7 +56,22 @@ function finHtml(){
   const cls = st => ["g","y","r"].includes(st) ? st : "y";
   const worst = F.items.some(i=>i.state==="r") ? "r" : F.items.some(i=>i.state==="y") ? "y" : "g";
   const age = F.stand ? Math.round((new Date(dateKey(new Date())) - new Date(F.stand)) / 864e5) : null;
-  let h = `<div class="card"><div class="spread"><h3>${L("Money","Finanzen")}</h3><span class="chip ${worst}"><span class="dot"></span>${word[worst]}</span></div>`;
+  // monthly upload card: from the 1st until HQ has written this month's check (8.11.2026, Oti could not find where to upload)
+  const today = dateKey(new Date()), monthNow = today.slice(0,7);
+  const due = !F.stand || F.stand.slice(0,7) < monthNow;
+  let h = "";
+  if(due){
+    const up = F.upload && /^https:\/\/drive\.google\.com\//.test(F.upload) ? F.upload : null;
+    h += `<div class="card" style="border:2px solid var(--ink)"><h3>${L("Finance check due: upload your data","Finanzcheck fällig: Daten hochladen")}</h3>
+      <ol style="margin:8px 0 12px;padding-left:20px;display:grid;gap:6px">
+        <li>${L("Export last month's transactions as CSV or PDF: ING, N26, Trade Republic (plus depot overview).","Umsätze vom letzten Monat als CSV oder PDF exportieren: ING, N26, Trade Republic (plus Depotübersicht).")}</li>
+        <li>${L("Put the files into the folder below, or simply attach them in the HQ chat.","Dateien in den Ordner unten legen oder einfach im HQ Chat anhängen.")}</li>
+        <li>${L("Write \"Finanzcheck\" in the HQ chat.","Im HQ Chat \"Finanzcheck\" schreiben.")}</li>
+      </ol>
+      ${up ? `<a href="${esc(up)}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:12px 14px;border-radius:12px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600">${L("Open upload folder","Upload Ordner öffnen")}</a>` : ""}
+    </div>`;
+  }
+  h += `<div class="card"><div class="spread"><h3>${L("Money","Finanzen")}</h3><span class="chip ${worst}"><span class="dot"></span>${word[worst]}</span></div>`;
   h += `<p class="small muted">${L("As of","Stand")} ${F.stand ? esc(F.stand.split("-").reverse().join(".")) : "?"}${age!=null && age>40 ? " · "+L("older than a month","älter als ein Monat") : ""}. ${L("No amounts here, only the traffic light.","Hier keine Beträge, nur die Ampel.")}</p>`;
   h += `<div class="list">${F.items.map(i=>`<div class="spread" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:nowrap;align-items:center"><div style="min-width:0;flex:1"><b>${esc(i.label)}</b><div class="small muted">${esc(i.text||"")}</div></div><span class="chip ${cls(i.state)}" style="flex-shrink:0"><span class="dot"></span>${word[cls(i.state)]}</span></div>`).join("")}</div></div>`;
   if(Array.isArray(F.next) && F.next.length) h += `<div class="card"><h3>${L("Next steps","Nächste Schritte")}</h3><div class="list">${F.next.slice(0,3).map(n=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><span class="small muted">${esc(n.due||"")}</span><div>${esc(n.text||"")}</div></div>`).join("")}</div></div>`;
