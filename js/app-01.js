@@ -268,7 +268,7 @@ function footballDef(){ return finishDef({name:"Football", sub:"Match, counts as
   {n:"Play", d:"Full effort. Drink about 500 ml per hour.", s:1},
   {n:"After", d:"30 to 40 g protein within an hour, lights out as the app says", s:1}]}); }
 function afterFootball(def){ const d = structuredClone(def);
-  d.blocks = d.blocks.filter(b=>!/Nordic|Pistol|Broad jump|Copenhagen/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : b);
+  d.blocks = d.blocks.filter(b=>!/Slider leg curl|Nordic|Pistol|Broad jump|Copenhagen/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : b);
   d.sub = "Pull + arms, light legs after football"; return finishDef(d); }
 // compact strength (Oti, 19.10.2026): when the normal session does not fit its day (Monday lessons now start 13:00),
 // one set less on every exercise with 3 or more sets and no core finisher, so it fits 11:10 to 12:00 before lunch
@@ -299,7 +299,7 @@ function weekIndex(date){ return Math.floor((mondayOf(date) - mondayOf(fromKey(p
 const DELOAD = w => w===4 || w===8;
 // Strength A+B in one session (Oti, 21.10.2026): when a strength day is lost, the next one combines both.
 // Main lifts of A (pull ups) and B (push variation) keep their sets and progression, everything else 2 sets
-// (pike 3), no jumps, pistols, Nordics, chin ups, curls or core finishers, so it stays about 65 min.
+// (pike 3), no jumps, pistols, slider curls, chin ups, curls or core finishers, so it stays about 65 min.
 function comboDef(w){
   const A = sessionDef("strengthA", w), B = sessionDef("strengthB", w);
   const pick = (D, re, cap, extra) => { const b = D.blocks.find(x=>re.test(x.n)); if(!b) return null; const c = structuredClone(b);
@@ -366,7 +366,8 @@ function sessionDef(key, w){
         {n:"Pull ups", d: wb>=5 ? `${sets} × ${pu}: strict, but pull the last 2 sets explosively to the chest (muscle up prep), 2 min rest` : `${sets} × ${pu} strict, 2 min rest`, s:sets, prog:{id:"pullups", reps:pu, note:pr.note}},
         {n:"Bulgarian split squat", d:["12 per leg, bodyweight","10 per leg, 3 s lowering","8 per leg, pause at the bottom, then explode"][phase], s:dl?2:3},
         {n:"Pistol progression", d:["Box pistol to knee height, 5 per leg","Box pistol to a lower box, 5 per leg","Pistol holding a door frame, 4 per leg"][phase], s:3},
-        {n:"Nordic curl negatives", d:`${3+phase} reps, feet under the sofa, lower slowly`, s:3},
+        // Nordic curls replaced 11.11.2026 (Oti: no way to anchor the heels); slider leg curls, eccentric hamstring work without an anchor
+        {n:"Slider leg curls", d:["8 reps, both legs: heels on a towel or in socks on a smooth floor, hips up, slide out in 3 s, pull back in","5 per leg: slide out on one leg in 4 s, pull back in with both","5 per leg, single leg out and in, hips stay up"][phase], s:3},
         {n:"Copenhagen plank", d:`${[15,20,25][phase]} s per side, knee version first (groin injury prevention for soccer)`, s:dl?2:3},
         {n:"Hammer curls", d:`8 to 10 @ ${dbKg()} kg`, s:3},
         {n:"Hollow body hold", d:`${30+phase*10} s`, s:3}]};
@@ -637,7 +638,7 @@ function trainingDone(k, def){ const st = logData.days[k]?.sets || {}; return de
 function watchConfirmed(k){ const L = logData.days[k]; return !!(L?.autoDone && L.auto && Object.keys(L.auto).length); }
 function isDone(k, def){ return !!logData.days[k]?.done?.[def.sessionKey] || watchConfirmed(k); }
 // short technique videos: opens a YouTube search for a good tutorial (no fixed video that could disappear)
-const HOWTO = [[/broad jump/i,"broad jump lateral bound technique"],[/pull ups/i,"strict pull up technique tutorial"],[/chin ups/i,"chin up technique tutorial"],[/bulgarian/i,"bulgarian split squat bodyweight technique"],[/pistol/i,"box pistol squat progression tutorial"],[/nordic/i,"nordic curl negative at home tutorial"],[/copenhagen/i,"copenhagen plank knee version tutorial"],[/hammer curl/i,"dumbbell hammer curl technique"],[/db curls/i,"dumbbell curl technique"],[/hollow/i,"hollow body hold tutorial"],[/archer push/i,"archer push up progression tutorial"],[/decline push/i,"decline push up technique"],[/pike push/i,"pike push up tutorial"],[/^push ups/i,"perfect push up technique"],[/^dips/i,"parallel bar dips technique"],[/overhead triceps/i,"dumbbell overhead triceps extension technique"],[/hanging knee/i,"hanging knee raise technique"],[/false grip/i,"false grip hang muscle up tutorial"],[/warm up \+ mobility/i,"5 minute full body warm up mobility routine"]];
+const HOWTO = [[/broad jump/i,"broad jump lateral bound technique"],[/pull ups/i,"strict pull up technique tutorial"],[/chin ups/i,"chin up technique tutorial"],[/bulgarian/i,"bulgarian split squat bodyweight technique"],[/pistol/i,"box pistol squat progression tutorial"],[/slider leg curl/i,"slider hamstring curl towel bodyweight tutorial"],[/copenhagen/i,"copenhagen plank knee version tutorial"],[/hammer curl/i,"dumbbell hammer curl technique"],[/db curls/i,"dumbbell curl technique"],[/hollow/i,"hollow body hold tutorial"],[/archer push/i,"archer push up progression tutorial"],[/decline push/i,"decline push up technique"],[/pike push/i,"pike push up tutorial"],[/^push ups/i,"perfect push up technique"],[/^dips/i,"parallel bar dips technique"],[/overhead triceps/i,"dumbbell overhead triceps extension technique"],[/hanging knee/i,"hanging knee raise technique"],[/false grip/i,"false grip hang muscle up tutorial"],[/warm up \+ mobility/i,"5 minute full body warm up mobility routine"]];
 function howto(n){ const h = HOWTO.find(([re])=>re.test(n)); return h ? `<a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(h[1])}" target="_blank" rel="noopener" style="color:var(--lift);font-weight:600;text-decoration:none;white-space:nowrap">▶ Video</a>` : ""; }
 function blocksHtml(def, k){
   const s = logData.days[k]?.sets || {}, str = def.type==="strength";

@@ -229,6 +229,17 @@
     cam:{p:[3.3,1.0,.7], l:[0,.5,.05]}, props(S){ PR.floor(S); PR.box(S, [0,.025,.0], [.5,.05,.3], 0x5a5249); PR.bar(S, .19, -.45, .6); PR.box(S, [.33,.1,-.45], [.04,.2,.04], 0x5a5249); PR.box(S, [-.33,.1,-.45], [.04,.2,.04], 0x5a5249); },
     lower:true, keys:[nord(0), nord(58)] };
 
+  // slider leg curl: lying on the back, heels on a towel, hips up; the heels slide out and are pulled back in (replaces the Nordic, 11.11.2026)
+  const sld = k => { const hy = k ? .32 : .16, hz = k ? -.09 : -.01, fz = k ? .36 : .84, sp = k ? [-42,-40,-30,-10,8,12] : [-10,-10,-7,-3,4,6], fd = k ? [0,.88,.47] : [0,.96,.28];
+    return {frame:-90, at:{hipjoints:[0,hy,hz]}, spine:sp,
+      limbs:{"upperarm.L":arm(-6+(k?-1:0),16,"L"),"upperarm.R":arm(-6+(k?-1:0),16,"R"),"forearm.L":arm(-6+(k?-1:0),14,"L"),"forearm.R":arm(-6+(k?-1:0),14,"R")},
+      ik:{"foot.L":{t:[.11,.075,fz], w:true, pole:[0,1,0], dir:fd, ref:[0,fd[2],-fd[1]]}, "foot.R":{t:[-.11,.075,fz], w:true, pole:[0,1,0], dir:fd, ref:[0,fd[2],-fd[1]]}}}; };
+  EX.slider = { re:/slider leg curl/i, en:"Slider leg curls", de:"Slider Beinbeuger Curls", work:["hamstrings","glutes"],
+    mus:{en:"Hamstrings, glutes", de:"Beinbeuger, Gesäß"},
+    cues:{en:["Heels on a towel or in socks on a smooth floor","Hips up, body straight from shoulders to knees","Slide out slowly, pull the heels back in"], de:["Fersen auf einem Handtuch oder in Socken auf glattem Boden","Hüfte hoch, Körper gerade von Schultern bis Knie","Langsam rausgleiten, Fersen wieder ranziehen"]},
+    cam:{p:[2.5,.62,.95], l:[0,.16,.12]}, props(S){ PR.floor(S); PR.box(S, [0,.004,.62], [.42,.008,.56], 0x6d6253); },
+    keys:[sld(0), sld(1)] };
+
   // copenhagen, knee version: lying on the left side, left forearm on the floor, right knee on the bench
   const SIDE = {x:[0,-1,0], y:[0,0,1]};
   EX.copenhagen = { re:/copenhagen/i, en:"Copenhagen plank, knee version", de:"Copenhagen Plank, Knie Variante", work:["adductors","obliques","abs"],
