@@ -263,12 +263,19 @@ function finishDef(d){
     const wu = d.blocks.find(b=>b.n==="Warm up" && /^15 min easy/.test(b.d));
     if(wu) wu.d = wu.d.replace(/^15 min easy/, "10 min easy"); else d.min = (d.min||0) + 5;
   } d.lines = d.blocks.map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`); d.total = d.blocks.reduce((n,b)=>n+b.s,0); return d; }
-function footballDef(){ return finishDef({name:"Football", sub:"Match, counts as a hard session", hard:true, keySession:false, min:180, type:"sport", sessionKey:"football", blocks:[
+// match day (Hero League plan, Oti 14.11.2026): re warm before every game (5 games of 8 min, 11 to 22 min breaks), hard coffee stop
+function footballDef(){ return finishDef({name:"Football", sub:`Match, counts as a hard session · no coffee after ${profile.coffeeCutoff}`, hard:true, keySession:false, min:180, type:"sport", sessionKey:"football", blocks:[
   {n:"Warm up", d:"10 min jog, leg swings, 3 short sprints before kick off", s:1},
-  {n:"Play", d:"Full effort. Drink about 500 ml per hour.", s:1},
-  {n:"After", d:"30 to 40 g protein within an hour, lights out as the app says", s:1}]}); }
+  {n:"Play", d:"Full effort. Before every game: 2 min side shuffles and 2 short sprints, jacket on in the breaks. Drink about 500 ml per hour.", s:1},
+  {n:"After", d:"30 to 40 g protein within an hour after the last game, lights out as the app says", s:1}]}); }
+// day before a football Sunday (Hero League plan, Oti 14.11.2026): the long run becomes short and fast, no tempo
+function preMatchDef(){ const P = paces();
+  return finishDef({name:"Easy run + strides", sub:"Day before the match: short and fast", hard:false, keySession:false, min:55, type:"run", sessionKey:"easy", blocks:[
+    {n:"45 min easy", d:`${pace(P.E2)} to ${pace(P.E1)}, HR under 150`, s:1},
+    {n:"4 × 10 s strides", d:"Smoothly speed up to about 90 %, walk back, 1 min rest. Quick and relaxed, never strained: fresh legs for tomorrow.", s:4}]}); }
 function afterFootball(def){ const d = structuredClone(def);
-  d.blocks = d.blocks.filter(b=>!/Slider leg curl|Nordic|Pistol|Broad jump|Copenhagen/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : b);
+  // Copenhagen stays with 2 sets (Hero League plan, Oti 14.11.2026): groin protection once a week, little leg fatigue
+  d.blocks = d.blocks.filter(b=>!/Slider leg curl|Nordic|Pistol|Broad jump/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : /Copenhagen/.test(b.n)? {...b, s:Math.min(b.s,2)} : b);
   d.sub = "Pull + arms, light legs after football"; return finishDef(d); }
 // compact strength (Oti, 19.10.2026): when the normal session does not fit its day (Monday lessons now start 13:00),
 // one set less on every exercise with 3 or more sets and no core finisher, so it fits 11:10 to 12:00 before lunch
@@ -349,7 +356,9 @@ function sessionDef(key, w){
   } else if(key==="easy"){
     const m = [35,40,40,30,45,30,45,35,45,50,45,30][wb-1];
     const hs = [4,5,6,4,6,5,8,5,8,10,10,6][wb-1], hsec = wb>=7?10:8;
-    d = {name:"Easy run + hill sprints", hard:false, min:m+15, type:"run", blocks:[{n:`${m} min easy`, d:E, s:1},{n:`${hs} × ${hsec} s hill sprints`, d:"Max effort uphill, walk back down, full 2 min rest. Stop if form breaks.", s:hs}]};
+    // ball wall appended (Hero League plan, Oti 14.11.2026: pass accuracy 57 %), last block so earlier tick keys stay valid
+    d = {name:"Easy run + hill sprints", hard:false, min:m+25, type:"run", blocks:[{n:`${m} min easy`, d:E, s:1},{n:`${hs} × ${hsec} s hill sprints`, d:"Max effort uphill, walk back down, full 2 min rest. Stop if form breaks.", s:hs},
+      {n:"Ball wall", d:"10 min at a wall, garage or rebounder: 50 one touch passes per foot, then 50 first touches with your head up and a pass back. Inside and outside, both feet.", s:1}]};
   } else if(key==="long"){
     const m = [50,60,65,50,70,55,75,55,80,80,85,50][wb-1], tempo = [2,5,7,9,10].includes(wb);
     d = {name:"Long run", hard:tempo, min:m+10, type:"run", blocks:[{n:`${tempo? m-(wb>=9?15:10) : m} min easy`, d:E, s:1}].concat(tempo? [{n:`${wb>=9?15:10} min tempo finish`, d:`Straight from the easy part, no break: the last ${wb>=9?15:10} min at ${pace(P.T)}. Comfortably hard, about 7 of 10: you can say a few words but not chat. Steady, do not sprint the end.`, s:1}] : [])};
@@ -495,6 +504,8 @@ function bedFor(date){
   let target = Math.max(ideal, Math.min(date.getDay()===6 ? Math.min(ramp, 1425) : ramp, next.wake + 1440 - 390));
   if(typeof isEveningDay==="function" && habits && isEveningDay(date)) target = Math.min(target, toMin(habits.evening.time) + 45);
   const lastEnd = Math.min(1440+120, Math.max(0, ...busyFor(date).filter(b=>b.e>=17*60 && b.e-b.s<=16*60).map(b=>b.e)));
+  // football evening (Hero League plan, Oti 14.11.2026): realistic lights out 23:45 (or 60 min after a later end), wake time stays
+  if(isFootball(date) && target < Math.max(23*60+45, lastEnd+60)){ const b = Math.max(23*60+45, lastEnd+60); return {bed:b, late:true, reason:"football", nextWake:next.wake, inBed: next.wake+1440-b, early: next.early, earlyReason: next.reason}; }
   if(lastEnd && lastEnd + 45 > target) return {bed:lastEnd+60, late:true, reason:"late event", nextWake:next.wake, inBed: next.wake+1440-(lastEnd+60), early: next.early, earlyReason: next.reason};
   return {bed:target, late:false, ramp:target>ideal, nextWake:next.wake, inBed: next.wake+1440-target, early: next.early, earlyReason: next.reason};
 }
@@ -518,7 +529,7 @@ function weekPlan(monday){
     let day = byDow(Number(dow)); if(profile.planFrom && dateKey(day.date) < profile.planFrom) continue; let def = sessionDef(s.key, w), pref = toMin(s.pref), moved = false;
     const sun = byDow(0), fbSun = isFootball(sun.date);
     if(fbSun && s.key==="easy" && Number(dow)===6) continue;
-    if(fbSun && s.key==="long"){ day = byDow(6); pref = toMin("16:00"); moved = true; }
+    if(fbSun && s.key==="long"){ day = byDow(6); pref = toMin("16:00"); def = preMatchDef(); }
     if(s.key==="strengthA" && isFootball(addDays(day.date,-1))) def = afterFootball(def);
     let t = findSlot(day.busy, pref, def.min, day.wake.wake+45, day.bed.bed - (def.hard?150:90));
     if(t==null && def.type==="strength"){ const c = compactDef(def), tc = findSlot(day.busy, pref, c.min, day.wake.wake+45, day.bed.bed-150); if(tc!=null){ def = c; t = tc; } }
