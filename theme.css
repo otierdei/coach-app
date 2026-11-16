@@ -579,3 +579,27 @@ nav.tabs button{font-size:12px}
 #v-week .wkrow .wt,#v-week .wkrow .wn small,#v-week .wkrow .wr{font-size:13px}
 #v-week .wkrow .wn{font-size:15px}
 #v-week .wkcoach{border:1px solid var(--line)}
+
+/* ---- Design A, Seite Aufgaben (16.11.2026): Blocküberschriften mit Farbmarke, Aufgaben als Zeilen mit Linien statt
+   grauer Kacheln in der Karte, Schrift mindestens 13 px, Tippflächen 44 px ---- */
+#v-tasks .eyebrow,#v-tasks .tk-m,#v-tasks .tk-p,#v-tasks .tk-subh,#v-tasks .tk-timer .m,#v-tasks .tk-spent,#v-tasks .tk-est,#v-tasks .small{font-size:13px}
+#v-tasks .tk-impd>summary .ey{font-size:13px;letter-spacing:.08em}
+#v-tasks .tk-n{font-size:13px;min-width:22px;line-height:22px;border-radius:11px}
+#v-tasks .chip{font-size:13px !important}
+#v-tasks .card,#v-tasks .tk-impd{border:1px solid var(--line)}
+#v-tasks .card > .spread > h3,#v-tasks details.tk-area > summary > span:first-child{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-tasks .card > .spread > h3::before,#v-tasks details.tk-area > summary > span:first-child::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--work);flex:none}
+#v-tasks details.tk-area > summary{min-height:44px}
+#v-tasks details.tk-area > summary > span.tk-cnt{font-size:13px}
+#v-tasks .list{gap:0}
+#v-tasks .tk-row{background:transparent;border-radius:0;padding:12px 0;border-top:1px solid var(--line)}
+#v-tasks .list > .tk-row:first-child{border-top:0;padding-top:4px}
+#v-tasks .tk-row.run{outline:0;background:color-mix(in srgb,var(--work) 10%,var(--card));border-radius:12px;border-top-color:transparent;margin:0 -8px;padding-inline:8px}
+#v-tasks .tk-row.run + .tk-row{border-top-color:transparent}
+#v-tasks .tk-t{font-size:16px}
+#v-tasks .tk-pin{min-width:44px;min-height:44px}
+#v-tasks .seg button{min-height:44px;font-size:14px}
+#v-tasks .tk-play,#v-tasks .tk-x,#v-tasks .tk-st input{min-height:44px}
+#v-tasks #tkQuickAdd{min-width:48px;min-height:48px}
+#v-tasks .fall,#v-tasks .fhd{min-height:44px}
+#v-tasks .tk-hi{font-size:13px;width:20px;height:20px}
