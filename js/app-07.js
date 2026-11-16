@@ -51,7 +51,7 @@ function renderLife(){
    Amounts and balances live only in the claude.ai dashboard behind Oti's login, never in Coach Data. */
 function finHtml(){
   const F = logData.fin;
-  if(!F || !Array.isArray(F.items)) return `<div class="card"><h3>${L("Money","Finanzen")}</h3><p class="small muted">${L("No finance check yet. HQ fills this after the check on the 7th.","Noch kein Finanzcheck. HQ füllt das nach dem Check am 7.")}</p></div>`;
+  if(!F || !Array.isArray(F.items)) return `<div class="card">${sechH(L("Money","Finanzen"), "var(--accent)")}<p class="small muted">${L("No finance check yet. HQ fills this after the check on the 7th.","Noch kein Finanzcheck. HQ füllt das nach dem Check am 7.")}</p></div>`;
   const word = {g:L("On track","Im Plan"), y:L("Watch","Beobachten"), r:L("Act","Handeln")};
   const cls = st => ["g","y","r"].includes(st) ? st : "y";
   const worst = F.items.some(i=>i.state==="r") ? "r" : F.items.some(i=>i.state==="y") ? "y" : "g";
@@ -62,7 +62,7 @@ function finHtml(){
   let h = "";
   if(due){
     const up = F.upload && /^https:\/\/drive\.google\.com\//.test(F.upload) ? F.upload : null;
-    h += `<div class="card" style="border:2px solid var(--ink)"><h3>${L("Finance check due: upload your data","Finanzcheck fällig: Daten hochladen")}</h3>
+    h += `<div class="card fdue">${sechH(L("Finance check due: upload your data","Finanzcheck fällig: Daten hochladen"), "var(--accent)")}
       <ol style="margin:8px 0 12px;padding-left:20px;display:grid;gap:6px">
         <li>${L("Export last month's transactions as CSV or PDF: ING, N26, Trade Republic (plus depot overview).","Umsätze vom letzten Monat als CSV oder PDF exportieren: ING, N26, Trade Republic (plus Depotübersicht).")}</li>
         <li>${L("Put the files into the folder below, or simply attach them in the HQ chat.","Dateien in den Ordner unten legen oder einfach im HQ Chat anhängen.")}</li>
@@ -71,10 +71,10 @@ function finHtml(){
       ${up ? `<a href="${esc(up)}" target="_blank" rel="noopener" style="display:block;text-align:center;padding:12px 14px;border-radius:12px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600">${L("Open upload folder","Upload Ordner öffnen")}</a>` : ""}
     </div>`;
   }
-  h += `<div class="card"><div class="spread"><h3>${L("Money","Finanzen")}</h3><span class="chip ${worst}"><span class="dot"></span>${word[worst]}</span></div>`;
+  h += `<div class="card"><div class="sech" style="--c:var(--accent)"><h3>${L("Money","Finanzen")}</h3><span class="chip ${worst}"><span class="dot"></span>${word[worst]}</span></div>`;
   h += `<p class="small muted">${L("As of","Stand")} ${F.stand ? esc(F.stand.split("-").reverse().join(".")) : "?"}${age!=null && age>40 ? " · "+L("older than a month","älter als ein Monat") : ""}. ${L("No amounts here, only the traffic light.","Hier keine Beträge, nur die Ampel.")}</p>`;
   h += `<div class="list">${F.items.map(i=>`<div class="spread" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:nowrap;align-items:center"><div style="min-width:0;flex:1"><b>${esc(i.label)}</b><div class="small muted">${esc(i.text||"")}</div></div><span class="chip ${cls(i.state)}" style="flex-shrink:0"><span class="dot"></span>${word[cls(i.state)]}</span></div>`).join("")}</div></div>`;
-  if(Array.isArray(F.next) && F.next.length) h += `<div class="card"><h3>${L("Next steps","Nächste Schritte")}</h3><div class="list">${F.next.slice(0,3).map(n=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><span class="small muted">${esc(n.due||"")}</span><div>${esc(n.text||"")}</div></div>`).join("")}</div></div>`;
+  if(Array.isArray(F.next) && F.next.length) h += `<div class="card">${sechH(L("Next steps","Nächste Schritte"), "var(--accent)")}<div class="list">${F.next.slice(0,3).map(n=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><span class="small muted">${esc(n.due||"")}</span><div>${esc(n.text||"")}</div></div>`).join("")}</div></div>`;
   if(F.link && /^https:\/\/claude\.ai\//.test(F.link)) h += `<div class="card"><a class="ghost" href="${esc(F.link)}" target="_blank" rel="noopener" style="display:inline-block;padding:10px 14px;border-radius:12px;border:1px solid var(--line);text-decoration:none;color:inherit">${L("Open dashboard with amounts","Dashboard mit Beträgen öffnen")}</a><p class="small muted" style="margin-top:6px">${L("Needs your claude.ai login.","Braucht deinen claude.ai Login.")}</p></div>`;
   return h;
 }

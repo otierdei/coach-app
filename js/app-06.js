@@ -178,20 +178,20 @@ function spiritHtml(){
   if(dow===habits.sabbath.dow && started(k)) items.push(`<button type="button" class="pw-tick" data-hab="sab" aria-pressed="${!!H.sab}"><span class="t">${L("Sabbath","Sabbat")}<small>${L("From","Ab")} ${habits.sabbath.start}, ${habits.sabbath.hours} ${L("hours","Stunden")}. ${L("Tick it tonight if you kept it.","Heute Abend abhaken, wenn du ihn gehalten hast.")}</small></span><span class="box">${CHECK_SVG}</span></button>`);
   if(!started(k)){ items.length = 0; items.push(`<p class="pw-sub">${L(`Your Rule starts on ${fmtDate(habits.start,{weekday:"long",day:"numeric",month:"long"})}. Tonight there is nothing to tick: read through the prayers below and go to bed.`,`Deine Rule startet am ${fmtDate(habits.start,{weekday:"long",day:"numeric",month:"long"})}. Heute gibt es nichts abzuhaken: lies die Gebete unten und geh ins Bett.`)}</p>`); }
   if(!items.length) items.push(`<p class="pw-sub">${dow===5?L("Friday is youth night. No Evening Rhythm to track tonight. Go to bed when you get home.","Freitag ist Jugendabend. Heute kein Abendrhythmus zum Tracken. Geh ins Bett, wenn du heimkommst."):L("Saturday is free from tracking. Pray as you like.","Samstag ist frei vom Tracken. Bete, wie es dir gut tut.")}</p>`);
-  h += `<div class="pw-card pw-tonight"><div class="spread" style="align-items:baseline"><h3>${L("Today","Heute")}</h3><span class="pw-sub" style="font-size:13px">${now.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"})}</span></div>
+  h += `<div class="pw-card pw-tonight">${sechH(L("Today","Heute"), "var(--pw-prayer)", now.toLocaleDateString(L("en-GB","de-DE"),{weekday:"long",day:"numeric",month:"long"}))}
     ${items.join("")}
     ${isEveningDay(now)?`<div class="row" style="gap:8px"><a class="pw-link solid" href="${LECTIO.app}" target="_blank" rel="noopener">Lectio 365 ${L("app","App")}</a><a class="pw-link" href="${LECTIO.web}" target="_blank" rel="noopener">lectio365.com</a><button type="button" class="pw-link" data-open-prayer="evening">${L("Guide me","Führ mich")}</button></div>`:""}</div>`;
   // this week, no streaks
-  h += `<div class="pw-card"><div class="spread"><h3>${L("This week","Diese Woche")}</h3><span class="pw-sub" style="font-size:13px">${L("no streaks, just honesty","keine Serien, nur Ehrlichkeit")}</span></div>
-    <div class="grid3" style="gap:8px">${[
-      [L("Evening Rhythm","Abendrhythmus"), `${ew.n} / ${ew.of}`],
+  h += `<div class="pw-card">${sechH(L("This week","Diese Woche"), "var(--pw-done)", L("no streaks, just honesty","keine Serien, nur Ehrlichkeit"))}
+    <div class="grid3 pwwk" style="gap:8px">${[
+      [L("Evening Rhythm","Abendrhythmus"), ring(ew.of?ew.n/ew.of:0, "var(--pw-done)", 64, 7, `${ew.n}/${ew.of}`, "", 17)],
       [L("Fast","Fasten"), weekDays(mon).some(d=>isFast(d)&&habOf(dateKey(d)).fast)?L("kept","gehalten"):"–"],
       [L("Sabbath","Sabbat"), weekDays(mon).some(d=>d.getDay()===habits.sabbath.dow&&habOf(dateKey(d)).sab)?L("kept","gehalten"):"–"]
     ].map(x=>`<div style="display:grid;gap:2px"><span style="font-size:22px;font-weight:500">${x[1]}</span><span class="pw-sub" style="font-size:12.5px">${x[0]}</span></div>`).join("")}</div>
     <div class="pw-sub" style="font-size:12.5px">${L("Evening Rhythm, last 4 weeks. Dashed days are free (Friday, Saturday).","Abendrhythmus, letzte 4 Wochen. Gestrichelte Tage sind frei (Freitag, Samstag).")}</div>${dotsHtml()}</div>`;
   // fruit
   const weeks = [...Array(8)].map((_,i)=>dateKey(addDays(mon,-7*(7-i))));
-  h += `<details class="lmore" ${now.getDay()===0?"open":""}><summary><span>${L("The fruit","Die Frucht")}<small>${L("Weekly check, Sunday night","Wochencheck, Sonntagabend")}${F.irr?` · ${L("this week","diese Woche")} ${F.irr}/5`:""}</small></span></summary><div class="lbody">
+  h += `<details class="lmore" style="--c:var(--pw-goal)" ${now.getDay()===0?"open":""}><summary><span>${L("The fruit","Die Frucht")}<small>${L("Weekly check, Sunday night","Wochencheck, Sonntagabend")}${F.irr?` · ${L("this week","diese Woche")} ${F.irr}/5`:""}</small></span></summary><div class="lbody">
     <p class="pw-sub">${L("Sunday night: how irritable was I this week? 1 is calm and patient, 5 is short fused all week. This measures change, not effort.","Sonntagabend: Wie gereizt war ich diese Woche? 1 ist ruhig und geduldig, 5 ist die ganze Woche kurz angebunden. Das misst Veränderung, nicht Anstrengung.")}</p>
     <div class="pw-scale" role="group" aria-label="${L("Irritability this week","Gereiztheit diese Woche")}">${[1,2,3,4,5].map(n=>`<button type="button" data-irr="${n}" aria-pressed="${F.irr===n}">${n}</button>`).join("")}</div>
     <label class="f" for="pwNote" style="color:var(--pw-muted)">${L("Where did hurry or self win this week? (optional)","Wo haben Eile oder Ego diese Woche gewonnen? (optional)")}<textarea id="pwNote">${esc(F.note||"")}</textarea></label>
@@ -200,7 +200,7 @@ function spiritHtml(){
     ${verse("gal5","--pw-goal")}</div></details>`;
   // rule
   const rr = ruleRows();
-  h += `<details class="lmore"><summary><span>${L("Your Rule · practices","Deine Rule · Praktiken")}<small>${rr.map(r=>esc(L(r.h[0],r.h[1]))).join(" · ")}</small></span></summary><div class="lbody pw-rule">${`<div class="pw-trio">${[["Daily","Täglich","Evening Rhythm","Abendrhythmus"],["Weekly","Wöchentlich","Thursday fast","Fasten am Donnerstag"],["Weekly","Wöchentlich","Sabbath, 12 hours","Sabbat, 12 Stunden"]].map(x=>`<div class="pw-mini"><span class="pw-freq">${L(x[0],x[1])}</span><span>${L(x[2],x[3])}</span></div>`).join("")}</div>`}`;
+  h += `<details class="lmore" style="--c:var(--pw-sol)"><summary><span>${L("Your Rule · practices","Deine Rule · Praktiken")}<small>${rr.map(r=>esc(L(r.h[0],r.h[1]))).join(" · ")}</small></span></summary><div class="lbody pw-rule">${`<div class="pw-trio">${[["Daily","Täglich","Evening Rhythm","Abendrhythmus"],["Weekly","Wöchentlich","Thursday fast","Fasten am Donnerstag"],["Weekly","Wöchentlich","Sabbath, 12 hours","Sabbat, 12 Stunden"]].map(x=>`<div class="pw-mini"><span class="pw-freq">${L(x[0],x[1])}</span><span>${L(x[2],x[3])}</span></div>`).join("")}</div>`}`;
   // one line per practice (Oti 23.10.): name, rhythm, status; the text opens on tap
   const short = t => { const c = t.indexOf(":"); if(c > 0 && c < 38) return t.slice(0, c); const w = t.split(/\s+/); return w.slice(0, 6).join(" ") + (w.length > 6 ? " …" : ""); };
   const stat = it => /aria-pressed="true"/.test(it.extra||"") ? `<span class="pw-st on">✓</span>` : /data-prompt/.test(it.extra||"") ? `<span class="pw-st">${L("open","offen")}</span>` : "";
@@ -208,16 +208,16 @@ function spiritHtml(){
     return `<details class="pw-prac"><summary><span class="ph">${it.c}</span><span class="pn">${esc(short(t))}</span>${stat(it)}</summary><div class="pt">${esc(t)}</div><div class="ph">${it.tag}</div>${it.extra||""}</details>`; }).join("")}</details>`;
   h += `</div></details>`;
   // prayers
-  h += `<details class="lmore" id="lmPray"><summary><span>${L("Pray","Beten")}<small>${PRAYERS.length} ${L("guided prayers","geführte Gebete")}</small></span></summary><div class="lbody">`;
+  h += `<details class="lmore" id="lmPray" style="--c:var(--pw-prayer)"><summary><span>${L("Pray","Beten")}<small>${PRAYERS.length} ${L("guided prayers","geführte Gebete")}</small></span></summary><div class="lbody">`;
   for(const p of PRAYERS) h += `<details class="pw-acc" id="pr-${p.id}"><summary><span>${L(p.t[0],p.t[1])}<small>${L(p.s[0],p.s[1])}</small></span></summary><div class="body">${p.body()}</div></details>`;
   h += `</div></details>`;
   // verses
-  h += `<details class="lmore"><summary><span>${L("Verses","Verse")}<small>${L("Scripture for this season","Bibelworte für diese Zeit")}</small></span></summary><div class="lbody">`;
+  h += `<details class="lmore" style="--c:var(--pw-other)"><summary><span>${L("Verses","Verse")}<small>${L("Scripture for this season","Bibelworte für diese Zeit")}</small></span></summary><div class="lbody">`;
   const groups = [[["Unhurried","Unhastig"],["mt11","ps46","is30"],"--pw-sol"],[["Slow to anger","Langsam zum Zorn"],["jas1","eph4","pr27"],"--pw-comm"],[["Less self","Weniger Ich"],["php2","mt6a"],"--pw-serv"],[["Lying down in peace","In Frieden liegen"],["ps139","pe5","ps4"],"--pw-prayer"]];
   h += `<div style="display:grid;gap:8px">${groups.map(g=>`<details class="pw-acc"><summary><span>${L(g[0][0],g[0][1])}<small>${g[1].map(id=>L(V[id].ref[0],V[id].ref[1])).join(" · ")}</small></span></summary><div class="body">${g[1].map(id=>verse(id,g[2])).join("")}</div></details>`).join("")}</div>`;
   h += `<p class="pw-sub" style="font-size:12px">${L("Verse text: World English Bible (public domain). Links open the ESV.","Bibeltext: Luther 1912 (gemeinfrei). Links öffnen die Lutherbibel 2017.")} <a href="https://www.practicingtheway.org/" target="_blank" rel="noopener" style="color:inherit">Practicing the Way</a></p>`;
   h += `</div></details>`;
-  h += `<details class="lmore"><summary><span>${L("Reflection","Reflexion")}<small>${L("Retake every quarter","Jedes Quartal wiederholen")}</small></span></summary><div class="lbody"><div class="row" style="gap:8px"><a class="pw-link solid" href="https://www.practicingtheway.org/reflection" target="_blank" rel="noopener">${L("Spiritual Health Reflection","Spiritual Health Reflection")}</a><a class="pw-link" href="https://www.practicingtheway.org/ruleoflifebuilder" target="_blank" rel="noopener">Rule of Life Builder</a></div>
+  h += `<details class="lmore" style="--c:var(--pw-serv)"><summary><span>${L("Reflection","Reflexion")}<small>${L("Retake every quarter","Jedes Quartal wiederholen")}</small></span></summary><div class="lbody"><div class="row" style="gap:8px"><a class="pw-link solid" href="https://www.practicingtheway.org/reflection" target="_blank" rel="noopener">${L("Spiritual Health Reflection","Spiritual Health Reflection")}</a><a class="pw-link" href="https://www.practicingtheway.org/ruleoflifebuilder" target="_blank" rel="noopener">Rule of Life Builder</a></div>
     <p class="pw-sub" style="font-size:12.5px">${L("Retake the reflection every quarter: next on Monday 14 December, 08:00.","Die Reflexion jedes Quartal wiederholen: als Nächstes Montag, 14. Dezember, 08:00.")}</p></div></details>`;
   return h;
 }
@@ -227,18 +227,18 @@ function musicHtml(){
   const now = new Date(), mon = mondayOf(now), W = musicWeek(mon), M = habits.music, G = M.goal;
   const atGoal = habits.songs.filter(s=>s.stage>=G.stage).length;
   let h = `<div style="padding:4px 2px 0"><div class="eyebrow">${L("Music · lead and maintenance","Musik · Fokus und Erhalt")}</div><h2>${L("One lead project","Ein Fokusprojekt")}</h2></div>`;
-  h += `<div class="rings-grid">
+  h += `<section class="card murings">${sechH(L("This week","Diese Woche"), "var(--sport)")}<div class="rings-grid">
     <div class="pcard">${ring(W.song/M.songPerWeek, "var(--sport)", 104, 10, `${W.song}/${M.songPerWeek}`, "", 24)}<div class="t">${L("Song sessions","Song Sessions")}</div><div class="s">${L("lead · 60 min or more","Fokus · ab 60 min")}</div></div>
-    <div class="pcard">${ring(W.reels/M.reelsPerWeek, "var(--run)", 104, 10, `${W.reels}/${M.reelsPerWeek}`, "", 24)}<div class="t">${L("Reel practice","Reel Übung")}</div><div class="s">${L("maintenance · filmed","Erhalt · gefilmt")} ${W.film}/${M.filmPerWeek}</div></div></div>`;
+    <div class="pcard">${ring(W.reels/M.reelsPerWeek, "var(--run)", 104, 10, `${W.reels}/${M.reelsPerWeek}`, "", 24)}<div class="t">${L("Reel practice","Reel Übung")}</div><div class="s">${L("maintenance · filmed","Erhalt · gefilmt")} ${W.film}/${M.filmPerWeek}</div></div></div></section>`;
   // planned
   const days = weekDays(mon).filter(d=>dateKey(d)>=dateKey(now)).concat(weekDays(addDays(mon,7)));
   const planned = days.flatMap(d=>musicPlanned(d).map(p=>({...p, date:dateKey(d)}))).slice(0,6);
-  h += `<div class="card"><div class="spread"><h3>${L("Planned","Geplant")}</h3><button type="button" class="ghost" id="muPlanAdd" style="padding:7px 12px;min-height:36px">${L("Plan a session","Session planen")}</button></div>
+  h += `<div class="card"><div class="sech" style="--c:var(--sport)"><h3>${L("Planned","Geplant")}</h3><button type="button" class="ghost" id="muPlanAdd" style="padding:7px 12px;min-height:36px">${L("Plan a session","Session planen")}</button></div>
     <p class="small muted">${L("Only planned sessions show up in your morning briefing. Saturday 09:00 is your standing song session (skipped on ILD days).","Nur geplante Sessions kommen ins Morgenbriefing. Samstag 09:00 ist deine feste Song Session (entfällt an ILD Tagen).")}</p>
     <div class="list">${planned.length?planned.map(p=>`<div class="lrow" style="grid-template-columns:1fr auto"><span class="t">${fmtDate(p.date,{weekday:"short",day:"numeric",month:"short"})} · ${p.time}</span><span class="m">${L(KIND[p.kind][0],KIND[p.kind][1])} · ${p.min} min${p.weekly?L(" · weekly"," · wöchentlich"):""}</span><button type="button" class="ghost" data-unplan="${p.date}|${p.id}" style="grid-row:1/3;grid-column:2;padding:6px 10px;min-height:34px">${p.weekly?L("Skip","Aussetzen"):L("Remove","Entfernen")}</button></div>`).join(""):`<p class="small muted">${L("Nothing planned yet.","Noch nichts geplant.")}</p>`}</div>
     <button type="button" class="primary" id="muLog">${L("Log a music session","Musik Session eintragen")}</button></div>`;
   // songs
-  h += `<div class="card"><div class="spread"><h3>${L("Song pipeline","Song Pipeline")}</h3><span class="mono small">${atGoal}/${G.count} ${L("at","bei")} ${L(STAGES[G.stage][0],STAGES[G.stage][1])}</span></div>
+  h += `<div class="card">${sechH(L("Song pipeline","Song Pipeline"), "var(--sport)", `${atGoal}/${G.count} ${L("at","bei")} ${L(STAGES[G.stage][0],STAGES[G.stage][1])}`)}
     <p class="small muted">${L(`Goal: ${G.count} songs at ${STAGES[G.stage][0]} by ${fmtDate(G.by)}. Progress means a song moved a stage, not hours spent.`,`Ziel: ${G.count} Songs bei ${STAGES[G.stage][1]} bis ${fmtDate(G.by)}. Fortschritt heißt, ein Song ist eine Stufe weiter, nicht Stunden.`)}</p>
     <div class="bar"><i style="width:${clamp(atGoal/G.count*100,0,100)}%;background:var(--sport)"></i></div>
     <div class="list">${habits.songs.length? habits.songs.map(s=>`<div class="song"><div class="top"><b>${esc(s.title)}</b><button type="button" class="ghost" data-song-del="${s.id}" style="padding:4px 10px;min-height:30px;font-size:12px">${L("Remove","Entfernen")}</button></div>
@@ -247,7 +247,7 @@ function musicHtml(){
     <div class="row" style="flex-wrap:nowrap"><input id="songNew" placeholder="${L("Song title","Songtitel")}" style="flex:1"><button type="button" id="songAdd">${L("Add","Hinzufügen")}</button></div></div>`;
   // reels focus
   const F = habits.focus, best = Object.keys(logData.days).filter(k=>!F.from||k>=F.from).flatMap(k=>(logData.days[k].hab?.mu||[]).filter(s=>s.kind==="reels"&&s.bpm).map(s=>s.bpm));
-  h += `<div class="card"><h3>${L("Reels focus","Reels Fokus")}</h3>
+  h += `<div class="card">${sechH(L("Reels focus","Reels Fokus"), "var(--run)")}
     <p class="small muted">${L("One groove or skill per 4 weeks. Practice first, film second. Filming only counts after a practice block.","Ein Groove oder Skill pro 4 Wochen. Erst üben, dann filmen. Filmen zählt erst nach einem Übungsblock.")}</p>
     <div class="grid3"><label class="f" for="fcText" style="grid-column:1/-1">${L("Focus","Fokus")}<input id="fcText" value="${esc(F.text||"")}" placeholder="${L("e.g. linear fill in 6/8","z. B. Linear Fill in 6/8")}"></label>
     <label class="f" for="fcStart">${L("Start BPM","Start BPM")}<input id="fcStart" type="number" inputmode="numeric" value="${F.startBpm??""}"></label>
@@ -257,7 +257,7 @@ function musicHtml(){
     <button type="button" id="fcSave">${L("Save focus","Fokus speichern")}</button></div>`;
   // recent
   const recent = Object.keys(logData.days).sort().reverse().flatMap(k=>(logData.days[k].hab?.mu||[]).map(s=>({...s,k}))).slice(0,8);
-  if(recent.length) h += `<div class="card"><h3>${L("Recent","Zuletzt")}</h3><div class="list">${recent.map(s=>`<div class="lrow" style="grid-template-columns:1fr auto"><span class="t">${L(KIND[s.kind][0],KIND[s.kind][1])} · ${s.min} min</span><span class="m">${fmtDate(s.k,{weekday:"short",day:"numeric",month:"short"})}${s.song?" · "+esc(habits.songs.find(x=>x.id===s.song)?.title||""):""}${s.stage?L(" · stage up"," · Stufe weiter"):""}${s.bpm?` · ${s.bpm} BPM`:""}${s.filmed?L(" · filmed"," · gefilmt"):""}</span><button type="button" class="ghost" data-mu-del="${s.k}|${s.id}" style="grid-row:1/3;grid-column:2;padding:6px 10px;min-height:34px">${L("Delete","Löschen")}</button></div>`).join("")}</div></div>`;
+  if(recent.length) h += `<div class="card">${sechH(L("Recent","Zuletzt"), "var(--sport)")}<div class="list">${recent.map(s=>`<div class="lrow" style="grid-template-columns:1fr auto"><span class="t">${L(KIND[s.kind][0],KIND[s.kind][1])} · ${s.min} min</span><span class="m">${fmtDate(s.k,{weekday:"short",day:"numeric",month:"short"})}${s.song?" · "+esc(habits.songs.find(x=>x.id===s.song)?.title||""):""}${s.stage?L(" · stage up"," · Stufe weiter"):""}${s.bpm?` · ${s.bpm} BPM`:""}${s.filmed?L(" · filmed"," · gefilmt"):""}</span><button type="button" class="ghost" data-mu-del="${s.k}|${s.id}" style="grid-row:1/3;grid-column:2;padding:6px 10px;min-height:34px">${L("Delete","Löschen")}</button></div>`).join("")}</div></div>`;
   return h;
 }
 

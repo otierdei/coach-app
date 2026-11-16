@@ -688,3 +688,79 @@ nav.tabs button{font-size:12px}
   #v-sleep .grid2{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
   #v-sleep .grid2 > .block:nth-child(2){border-top:0}
 }
+
+/* ---- Design A, Seite Leben (16.11.2026): Blocküberschriften mit Farbmarke aus den Übungsfarben (--pw-* unverändert),
+   Klappblöcke mit derselben Überschrift, innen Linien statt Kacheln und Rahmen, Ring für den Abendrhythmus,
+   Schrift mindestens 13 px, Tippflächen 44 px ---- */
+#v-life .sech{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#v-life .sech h3,#v-life details.lmore > summary > span{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-life .sech h3::before,#v-life details.lmore > summary > span::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+#v-life .sech > span{font-size:13px;font-weight:600;color:var(--muted);text-align:right}
+#v-life .card,#v-life .pw-card,#v-life .lmore{border:1px solid var(--line)}
+#v-life .card,#v-life .pw-card{padding:16px 14px}
+/* Klappblöcke: Titel als Blocküberschrift, Unterzeile darunter in normaler Schrift */
+#v-life details.lmore > summary > span{flex-wrap:wrap;row-gap:2px}
+#v-life details.lmore > summary > span > small{flex-basis:100%;padding-left:16px;font:500 13px var(--body);letter-spacing:0;text-transform:none;color:var(--muted)}
+#v-life details.lmore > summary{min-height:56px}
+/* Schrift mindestens 13 px */
+#v-life :is(.pw-eye,.eyebrow,.pw-dh,.pw-bars div,.pw-freq,.pw-mini,.pw-tag,.pw-st,.rn,.pw-prac .pa,.pw-verse .ref,.pw-acc > summary small,.pw-tick .t small,.pcard .s,.lrow .m,.stat span,.f,.ring .l){font-size:13px}
+#v-life .pw-sub[style*="font-size:12"]{font-size:13px !important}
+#v-life .ptw details.pw-row > summary .rn{font-size:13px}
+#v-life .song .ghost,#v-life .pw-prac .pa button,#v-life .chip{font-size:13px !important}
+/* Tippflächen 44 px */
+#v-life .pw-seg button,#v-life .pw-link,#v-life .pw-prac .pa button,#v-life .fall,#v-life button.ghost{min-height:44px !important}
+#v-life .fhd{width:44px;height:44px;min-height:44px;top:6px;right:6px}
+#v-life .fhost [data-fold]:not(.folded):not(details) > .fhd + *,#v-life [data-fold]:not(.folded):not(details) > .fhd + *{padding-right:48px;min-height:32px}
+#v-life .stages button{min-height:44px;font-size:13px}
+/* Ziel: getönt, ohne farbigen Rahmen */
+#v-life .ptw .pw-goal{box-shadow:none}
+/* Heute: Abhaken als Zeile mit Linie statt umrandeter Kachel */
+#v-life .pw-tonight{border:1px solid var(--line)}
+#v-life .pw-tick{border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 2px;min-height:56px}
+#v-life .pw-tick[aria-pressed="true"]{border-top-color:var(--line)}
+#v-life .pw-tick .t small{margin-top:2px}
+/* Diese Woche: Werte nebeneinander mit Linien, Ring für den Abendrhythmus */
+#v-life .pwwk{gap:0 !important;align-items:end}
+#v-life .pwwk > div{padding-left:14px;border-left:1px solid var(--line)}
+#v-life .pwwk > div:first-child{padding-left:0;border-left:0}
+#v-life .pwwk > div > span:first-child{display:block}
+#v-life .pwwk .ring .v{color:var(--ink)}
+/* Deine Rule: Rhythmen als Spalten mit Linien, Bereiche und Praktiken als Zeilen (Farbmarke bleibt, Tönung als Kennung) */
+#v-life .ptw .pw-trio{gap:0}
+#v-life .ptw .pw-mini{background:transparent;border-radius:0;padding:4px 8px;border-left:1px solid var(--line)}
+#v-life .ptw .pw-mini:first-child{border-left:0}
+#v-life .pw-rule{gap:0}
+#v-life .ptw details.pw-row{background:transparent;border-radius:0;padding:0 2px;border-top:1px solid var(--line)}
+#v-life .ptw details.pw-row[open]{background:color-mix(in srgb,var(--c) 9%,var(--card));border-radius:14px;border-top-color:transparent;margin:4px -8px;padding:0 10px 12px}
+#v-life .ptw details.pw-row[open] + details.pw-row{border-top-color:transparent}
+#v-life .ptw details.pw-prac{border:0;border-top:1px solid color-mix(in srgb,var(--c) 30%,var(--line));border-radius:0;padding:0 2px;margin-top:0}
+/* Beten und Verse: Zeilen mit Linien */
+#v-life .pw-acc{background:transparent;border-radius:0;padding:0 2px;border-top:1px solid var(--line)}
+#v-life .lbody > .pw-acc:first-child,#v-life .lbody > div > .pw-acc:first-child{border-top:0}
+#v-life .lbody > div:has(> .pw-acc){gap:0 !important}
+/* Musik: Ringe in einem Block ohne Kacheln, Zeilen mit Linien */
+#v-life .murings{gap:8px}
+#v-life .rings-grid{gap:0}
+#v-life .pcard{background:transparent;box-shadow:none;border-radius:0;padding:10px 6px}
+#v-life .pcard + .pcard{border-left:1px solid var(--line)}
+#v-life .pcard .t{font-size:15px}
+#v-life .list{gap:0}
+#v-life .lrow{background:transparent;border-radius:0;padding:12px 2px;border-top:1px solid var(--line)}
+#v-life .list > :first-child{border-top:0}
+#v-life .song{background:transparent;border-radius:0;padding:12px 2px;border-top:1px solid var(--line)}
+#v-life .stat{background:transparent;border-radius:0;padding:0 0 0 14px;border-left:1px solid var(--line)}
+/* Finanzen: fälliger Check getönt statt dicker Rahmen */
+#v-life .card.fdue{background:color-mix(in srgb,var(--accent) 10%,var(--card))}
+@media (min-width:1000px){
+  #v-life > div[data-notr]:not(.ptw){grid-template-columns:repeat(auto-fit,minmax(420px,1fr));align-items:start}
+  #v-life > div[data-notr]:not(.ptw) > :not(.card){grid-column:1/-1}
+  #v-life .murings{grid-column:1/-1}
+}
+#v-life .sech h3{white-space:nowrap}
+#v-life .lmore > .lbody{padding-top:4px}
+#v-life .stages button[aria-pressed="true"]{border-color:var(--line);font-weight:600}
+@media (min-width:1000px){
+  #v-life .ptw .pw-rule{column-gap:28px}
+  #v-life .ptw .pw-rule > .pw-trio{grid-column:1/-1;max-width:640px;margin-bottom:8px}
+  #v-life .murings .rings-grid{max-width:640px}
+}
