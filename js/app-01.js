@@ -249,6 +249,15 @@ function paces(){
 }
 const FB_RE = /fu(ß|ss)ball|football|kicken/i;
 function isFootball(date){ const k = dateKey(date); return (profile.footballDates||[]).includes(k) || calEventsForDay(date).some(e=>FB_RE.test(e.t)); }
+// hard Sunday (Oti, 15.11.2026): football, a long run marked hard (tempo finish) or intervals, from overrides or the plan
+function hardSunday(date){
+  const o = (profile.overrides||{})[dateKey(date)];
+  const wPrev = weekIndex(date);
+  if(o) return o.key==="football" || o.key==="intervals" || o.key==="test5k" || (o.key==="long" && !!sessionDef("long", wPrev).hard);
+  if(isFootball(date)) return true;
+  const s = (profile.sessions||{})[0];
+  return !!(s && (s.key==="intervals" || (s.key==="long" && sessionDef("long", wPrev).hard)));
+}
 function dbKg(){ return profile.body?.dbKg ?? 15; }
 // every session starts with 5 min warm up and mobility (injury prevention)
 const WARMUP = {
@@ -546,6 +555,30 @@ function weekPlan(monday){
     if(!done) u.from.conflict = u.def.name;
   }
   for(const d of days){ if(isFootball(d.date) && !(profile.planFrom && dateKey(d.date) < profile.planFrom)){ const fb = d.busy.find(x=>FB_RE.test(x.t)) || {s:toMin(profile.football.s), e:toMin(profile.football.e)}; if(d.session && d.session.def.sessionKey!=="football") unplaced.push({def:d.session.def, from:d}); d.session = {def:footballDef(), start:fb.s, end:fb.e, moved:false}; } }
+  // Monday after a hard Sunday (Oti, 15.11.2026): no Strength A, only a short recovery run.
+  // Strength A moves to Friday as Strength A+B; if that does not fit, the upper body part goes after Wednesday's intervals.
+  { const mon = byDow(1), sunPrev = addDays(monday,-1);
+    if(mon.session && mon.session.def.sessionKey==="strengthA" && !(profile.overrides||{})[dateKey(mon.date)] && hardSunday(sunPrev) && !(profile.planFrom && dateKey(mon.date) < profile.planFrom)){
+      const rec = easyRunDef(25, false); rec.name = "Recovery run"; rec.sub = "After a hard Sunday: Strength A moves to Friday";
+      rec.blocks = rec.blocks.map(b=>/min easy$/.test(b.n)? {...b, n:"20 to 30 min very easy", d:"HR under 140, no strides. Legs heavy: walk 30 min briskly instead."} : b);
+      rec.lines = rec.blocks.map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`);
+      const t = findSlot(mon.busy, mon.session.start, rec.min, mon.wake.wake+45, mon.bed.bed-90);
+      mon.session = {def:rec, start: t ?? mon.session.start, end:(t ?? mon.session.start)+rec.min, moved:false, afterHardSunday:true};
+      const fri = byDow(5), wed = byDow(3);
+      let placed = false;
+      if(fri.session && fri.session.def.sessionKey==="strengthB"){
+        const c = comboDef(w), tc = findSlot(fri.busy, fri.session.start, c.min, fri.wake.wake+45, fri.bed.bed-150);
+        if(tc!=null){ c.sub = "Strength A from Monday plus B, combined"; fri.session = {def:c, start:tc, end:tc+c.min, moved:true, fromDay:"Mon"}; placed = true; }
+      }
+      if(!placed && wed.session && wed.session.def.type==="run" && findSlot(wed.busy.filter(b=>!(b.s>=wed.session.start && b.e<=wed.session.end)), wed.session.start, wed.session.def.min+25, 0, wed.bed.bed-150)===wed.session.start){
+        const A = sessionDef("strengthA", w), add = A.blocks.filter(b=>/^Pull ups|^Hammer|^Copenhagen/.test(b.n)).map(b=>({...b, n:"After the run: "+b.n}));
+        const def = structuredClone(wed.session.def); def.blocks = [...def.blocks, ...add]; def.min += 25; def.sub = (def.sub? def.sub+" · ":"")+"plus Strength A upper body (Monday was recovery)";
+        def.lines = def.blocks.map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`); def.total = def.blocks.reduce((n,b)=>n+b.s,0);
+        wed.session = {...wed.session, def, end:wed.session.start+def.min}; placed = true;
+      }
+      if(!placed) mon.conflict = "Strength A (no free slot after the hard Sunday)";
+      mon.strengthAMoved = placed;
+    } }
   // one off changes for single days (Today → Change today's training)
   for(const d of days){
     const o = (profile.overrides||{})[dateKey(d.date)]; if(!o) continue;
@@ -556,6 +589,9 @@ function weekPlan(monday){
     if(st==null) st = toMin("17:00");
     d.session = {def, start:st, end:st+def.min, moved:false, override:true}; d.conflict = null;
   }
+  // an override on Friday or Wednesday replaced the moved Strength A: flag it on Monday instead of losing it silently
+  { const mon = byDow(1); if(mon.strengthAMoved){ const ov = profile.overrides||{};
+      if(ov[dateKey(byDow(5).date)] || ov[dateKey(byDow(3).date)]) if(!days.some(d=>d.session && /strengthA/.test(d.session.def.sessionKey||"") && d!==mon)) mon.conflict = "Strength A (moved session was replaced by a change)"; } }
   // ILD Saturday: training moves to 17:30 and stays easy (no sprints, no tempo, no intervals)
   for(const d of days){
     if(!d.session || d.session.override || d.session.def.type==="sport" || !isILD(d.date)) continue;
