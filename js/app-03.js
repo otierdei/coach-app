@@ -19,6 +19,8 @@ function renderWeek(){
   bindChecks("#v-week", defForKey);
   $("#wkPrev").onclick = ()=>{weekOffset--;render();}; $("#wkNext").onclick = ()=>{weekOffset++;render();}; $("#wkNow").onclick = ()=>{weekOffset=0;render();};
 }
+// Design A (16.11.2026): Blocküberschrift mit Farbmarke
+function sechH(t, c, st){ return `<div class="sech" style="--c:${c}"><h3>${t}</h3>${st?`<span>${st}</span>`:""}</div>`; }
 function consistency(n){
   const keys = [...Array(n)].map((_,i)=>dateKey(addDays(new Date(),-i)));
   const w = keys.map(k=>health.days[k]?.wakeAt).filter(x=>x!=null);
@@ -30,16 +32,18 @@ function renderSleep(){
   const nights = Object.entries(health.days).filter(([,v])=>v.onset!=null && v.wakeAt!=null).sort().slice(-30);
   const last14 = nights.slice(-14), sm = sleepMinFor(k), C = consistency(14);
   const wakeSd = sd(last14.map(([,v])=>v.wakeAt)), avg = mean(last14.map(([,v])=>v.sleepMin).filter(Boolean));
+  const st0 = stagesOf(health.days[k]), dAvg = mean(last14.map(([,v])=>v.deep).filter(Boolean)), rAvg = mean(last14.map(([,v])=>v.rem).filter(Boolean));
   let html = `<div style="padding:4px 2px 0"><div class="eyebrow">Sleep</div><h2>Rhythm first</h2></div>
-    <div class="card"><div class="minis" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <section class="card slrh">${sechH(L("Rhythm","Rhythmus"), "var(--sleep)", L("last 14 nights","letzte 14 Nächte"))}<div class="minis" style="grid-template-columns:repeat(2,minmax(0,1fr))">
       <div class="mini">${ring(sm?sm/profile.asleepNeed:0, "var(--sleep)", 116, 11, sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", "last night", 30)}<div class="cap">${sm?Math.round(sm/profile.asleepNeed*100)+"% of your 7:30 need":"Nothing logged"}</div></div>
       <div class="mini">${ring(C.n?C.ok/C.n:0, "var(--sleep)", 116, 11, C.n?`${C.ok}/${C.n}`:"–", "on anchor", 30)}<div class="cap">Wake within ±30 min, last 14 nights</div></div>
     </div>
     <div class="grid3"><div><div class="mono">${avg?dur(avg):"–"}</div><div class="small muted">avg asleep</div></div><div><div class="mono">${wakeSd!=null?"±"+Math.round(wakeSd)+" min":"–"}</div><div class="small muted">wake spread</div></div><div><div class="mono">${profile.wake}</div><div class="small muted">anchor</div></div></div>
-    ${nights.length?sleepChart(nights):`<p class="small muted">Sleep history appears here once your Shortcuts automation sends data.</p>`}</div>`;
+    ${st0||dAvg?`<div class="csub">${st0?`<div><span>${L("Sleep stages last night","Schlafphasen letzte Nacht")}</span><span>${L("deep","Tief")} ${dur(st0.deep)} · REM ${dur(st0.rem)}</span></div>`:""}${dAvg?`<div><span>${L("Sleep stages avg","Schlafphasen Ø")}</span><span>${L("deep","Tief")} ${dur(dAvg)} · REM ${dur(rAvg||0)}</span></div>`:""}</div>`:""}
+    ${nights.length?sleepChart(nights):`<p class="small muted">Sleep history appears here once your Shortcuts automation sends data.</p>`}</section>`;
   html += nightsHtml(nights);
   html += journalHtml();
-  html += `<div class="card"><h3>This week's nights</h3><div class="tbl"><table><thead><tr><th>Night</th><th class="num">Last meal</th><th class="num">Lights out</th><th class="num">Wake</th><th class="num">In bed</th></tr></thead><tbody>`;
+  html += `<div class="card">${sechH("This week's nights", "var(--sleep)")}<div class="tbl"><table><thead><tr><th>Night</th><th class="num">Last meal</th><th class="num">Lights out</th><th class="num">Wake</th><th class="num">In bed</th></tr></thead><tbody>`;
   for(const d of P.days){ const nx = addDays(d.date,1);
     html += `<tr><td>${SHORT[d.date.getDay()]} → ${SHORT[nx.getDay()]}${d.bed.late?` <span class="chip sleep">late</span>`:""}${d.bed.early?` <span class="chip sleep">early</span>`:""}</td><td class="num mono">${fmt(lastMealFor(d))}</td><td class="num mono">${fmt(d.bed.bed)}</td><td class="num mono">${fmt(d.bed.nextWake)}</td><td class="num mono">${dur(d.bed.inBed)}</td></tr>`; }
   html += `</tbody></table></div>
@@ -75,7 +79,7 @@ function nightsHtml(nights){
   if(!nights.length) return "";
   const rows = [...nights].reverse().map(([k,v])=>{ const st = stagesOf(v), g = nightGrade(k);
     return `<button type="button" class="nrow" data-night="${k}"><span class="t">${esc(nightLabel(k))}</span><span class="m">${fmt(v.onset)} to ${fmt(v.wakeAt)}${st?` · deep ${st.deep} · REM ${st.rem}`:""}</span><span class="v"><span class="chip ${g.c}" style="padding:2px 8px">${g.t}</span>${dur(v.sleepMin||0)}</span><span class="sb">${stageBar(st)}</span></button>`; });
-  return `<div class="card"><div class="spread"><h3>Nights</h3><span class="small muted">tap a night</span></div>${SLEGEND}
+  return `<div class="card">${sechH("Nights", "var(--sleep)", "tap a night")}${SLEGEND}
     <div class="list">${rows.slice(0,7).join("")}</div>
     ${rows.length>7?`<details><summary>Older nights (${rows.length-7})</summary><div class="list" style="margin-top:8px">${rows.slice(7).join("")}</div></details>`:""}</div>`;
 }
@@ -139,30 +143,30 @@ function renderProgress(){
   const pc = c=>`<div class="pcard">${ring(c[0], c[1], 104, 10, c[2], "", c[2].length>5?20:26)}<div class="t">${c[3]}</div><div class="s">${c[4]} · ${Math.round(c[0]*100)}%</div></div>`;
   const nGoals = METRICS.length + 1, goals = cards.slice(0, nGoals), habits = cards.slice(nGoals);
   if(profile.creatineFrom && dateKey(now) >= profile.creatineFrom){ const ds = [...Array(7)].map((_,i)=>dateKey(addDays(now,-i))).filter(x=>x>=profile.creatineFrom); const n = ds.filter(x=>logData.days[x]?.crea).length; habits.push([ds.length? n/ds.length : 0, "var(--lift)", `${n}/${ds.length}`, "Creatine", "days taken, last 7"]); }
-  let html = `<div style="padding:4px 2px 0"><div class="eyebrow">Progress · ${w<1?"block 1 starts 28 Sep":`block 1, week ${clamp(w,1,12)} of 12`}</div><h2>Your habits</h2></div><div class="rings-grid">${habits.map(pc).join("")}</div>`;
+  let html = `<div style="padding:4px 2px 0"><div class="eyebrow">Progress · ${w<1?"block 1 starts 28 Sep":`block 1, week ${clamp(w,1,12)} of 12`}</div><h2>${L("Habits and goals","Gewohnheiten und Ziele")}</h2></div><section class="card fprings">${sechH(L("Habits","Gewohnheiten"), "var(--week)", L("last 7 days","letzte 7 Tage"))}<div class="rings-grid">${habits.map(pc).join("")}</div></section>`;
   html += paiHtml();
   html += vo2Html();
   html += ageHtml();
   html += workoutsHtml();
-  html += `<div style="padding:10px 2px 0"><div class="eyebrow">Block and long term</div><h2>Your goals</h2></div><div class="rings-grid">${goals.map(pc).join("")}</div>`;
-  html += `<div class="card"><h3>Log a test</h3><p class="small muted">A 5k test is built into week 6, a 10k test into week 12. Test pull ups, push ups and pistols the same weeks, fresh.</p>
+  html += `<section class="card fprings">${sechH(L("Goals","Ziele"), "var(--accent)", "Block and long term")}<div class="rings-grid">${goals.map(pc).join("")}</div></section>`;
+  html += `<div class="card">${sechH("Log a test", "var(--week)")}<p class="small muted">A 5k test is built into week 6, a 10k test into week 12. Test pull ups, push ups and pistols the same weeks, fresh.</p>
     <div class="grid3"><label class="f" for="tMetric">Test<select id="tMetric">${METRICS.map(m=>`<option value="${m.k}">${m.n}</option>`).join("")}</select></label>
     <label class="f" for="tVal">Result<input id="tVal" placeholder="22:58 or 9"></label><label class="f" for="tDate">Date<input id="tDate" type="date" value="${dateKey(now)}"></label></div>
     <button id="btnTest">Save result</button></div>`;
   const P = paces();
-  html += `<div class="card"><h3>Your paces</h3><div class="grid2"><div><div class="mono">${pace(P.E2)} to ${pace(P.E1)}</div><div class="small muted">Easy · HR under 150</div></div><div><div class="mono">${pace(P.T)}</div><div class="small muted">Tempo</div></div><div><div class="mono">${pace(P.I)}</div><div class="small muted">Intervals</div></div><div><div class="mono">${pace(P.G)}</div><div class="small muted">Block goal pace (${profile.targets.t5k})</div></div></div></div>`;
+  html += `<div class="card">${sechH("Your paces", "var(--run)")}<div class="grid2"><div><div class="mono">${pace(P.E2)} to ${pace(P.E1)}</div><div class="small muted">Easy · HR under 150</div></div><div><div class="mono">${pace(P.T)}</div><div class="small muted">Tempo</div></div><div><div class="mono">${pace(P.I)}</div><div class="small muted">Intervals</div></div><div><div class="mono">${pace(P.G)}</div><div class="small muted">Block goal pace (${profile.targets.t5k})</div></div></div></div>`;
   const series = f => Object.entries(health.days).filter(([,v])=>v[f]).sort().slice(-60).map(([k,v])=>[k,v[f]]);
   const rhr = series("rhr"), hrv = series("hrv"), wt = series("weight");
-  html += `<div class="card"><h3>Resting heart rate</h3>${rhr.length>1? lineChart(rhr,"Resting heart rate","bpm","var(--rec-r)") : `<p class="small muted">Appears once data syncs.</p>`}</div>`;
-  if(hrv.length>1) html += `<div class="card"><h3>HRV</h3>${lineChart(hrv,"HRV","ms","var(--rec-g)")}</div>`;
+  html += `<div class="card">${sechH("Resting heart rate", "var(--rec-r)")}${rhr.length>1? lineChart(rhr,"Resting heart rate","bpm","var(--rec-r)") : `<p class="small muted">Appears once data syncs.</p>`}</div>`;
+  if(hrv.length>1) html += `<div class="card">${sechH("HRV", "var(--rec-g)")}${lineChart(hrv,"HRV","ms","var(--rec-g)")}</div>`;
   const rrS = series("rr"), hn = series("hrn");
-  if(hn.length>1) html += `<div class="card"><h3>Night pulse</h3>${lineChart(hn,"Night pulse","bpm","var(--rec-r)")}<p class="small muted">A jump of more than 5 above your normal is often the first sign of getting sick.</p></div>`;
-  if(rrS.length>1) html += `<div class="card"><h3>Breathing rate at night</h3>${lineChart(rrS,"Breathing rate","/min","var(--sleep)")}</div>`;
+  if(hn.length>1) html += `<div class="card">${sechH("Night pulse", "var(--rec-r)")}${lineChart(hn,"Night pulse","bpm","var(--rec-r)")}<p class="small muted">A jump of more than 5 above your normal is often the first sign of getting sick.</p></div>`;
+  if(rrS.length>1) html += `<div class="card">${sechH("Breathing rate at night", "var(--sleep)")}${lineChart(rrS,"Breathing rate","/min","var(--sleep)")}</div>`;
   const kc = series("kcal");
   const stS = [...Array(42)].map((_,i)=>dateKey(addDays(now,-(42-i)))).map(k=>[k, strainFor(k)]).filter(p=>p[1]!=null);
-  if(stS.length>1) html += `<div class="card"><h3>Strain</h3>${lineChart(stS,"Strain","","var(--load)")}<p class="small muted">0 to 21, from heart rate zones of your watch workouts plus steps. Green days: aim 14 to 18, yellow 10 to 14, red under 9.</p></div>`;
-  if(kc.length>1) html += `<div class="card"><h3>Active calories</h3>${lineChart(kc,"Active calories","kcal","var(--week)")}<p class="small muted">Estimated by your watch. Treat it as a trend, not an exact number: wrist estimates are often 20 to 30% off.</p></div>`;
-  if(wt.length>1) html += `<div class="card"><h3>Weight</h3>${lineChart(wt,"Weight","kg","var(--ink-2)")}<p class="small muted">Recomposition: expect the scale to stay within about 1 kg while strength numbers rise.</p></div>`;
+  if(stS.length>1) html += `<div class="card">${sechH("Strain", "var(--load)")}${lineChart(stS,"Strain","","var(--load)")}<p class="small muted">0 to 21, from heart rate zones of your watch workouts plus steps. Green days: aim 14 to 18, yellow 10 to 14, red under 9.</p></div>`;
+  if(kc.length>1) html += `<div class="card">${sechH("Active calories", "var(--week)")}${lineChart(kc,"Active calories","kcal","var(--week)")}<p class="small muted">Estimated by your watch. Treat it as a trend, not an exact number: wrist estimates are often 20 to 30% off.</p></div>`;
+  if(wt.length>1) html += `<div class="card">${sechH("Weight", "var(--ink-2)")}${lineChart(wt,"Weight","kg","var(--ink-2)")}<p class="small muted">Recomposition: expect the scale to stay within about 1 kg while strength numbers rise.</p></div>`;
   $("#v-progress").innerHTML = html;
   bindTips("#v-progress");
   const wall = (health.workouts||[]).filter(w=>w.type!=="Walk").slice().sort((a,b)=>(a.date+(a.start||""))<(b.date+(b.start||""))?1:-1);
@@ -285,9 +289,9 @@ function workoutsFor(k){ return (health.workouts||[]).filter(w=>w.date===k && w.
 function wkLine(w){ return [w.start, `${w.min} min`, w.km?`${w.km.toFixed(2)} km`:"", w.pace?`${w.pace}/km`:"", w.hrAvg?`♥ ${w.hrAvg}/${w.hrMax}`:"", w.kcal?`${w.kcal} kcal`:""].filter(Boolean).join(" · "); }
 function workoutsHtml(){
   const all = (health.workouts||[]).filter(w=>w.type!=="Walk").slice().sort((a,b)=>(a.date+(a.start||""))<(b.date+(b.start||""))?1:-1);
-  if(!all.length) return `<div class="card"><h3>Workouts</h3><p class="small muted">No workouts yet.</p></div>`;
+  if(!all.length) return `<div class="card">${sechH("Workouts", "var(--run)")}<p class="small muted">No workouts yet.</p></div>`;
   const row = (w,i)=>wrow(w, `data-wk="${i}"`);
-  return `<div class="card"><div class="spread"><h3>Workouts</h3><span class="small muted">${all.length} from your watch</span></div>
+  return `<div class="card">${sechH("Workouts", "var(--run)", `${all.length} from your watch`)}
     ${ZLEGEND}<div class="list">${all.slice(0,6).map(row).join("")}</div>
     ${all.length>6?`<button type="button" class="ghost" id="wkAll">Show all ${all.length}</button>`:""}</div>`;
 }

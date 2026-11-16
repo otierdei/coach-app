@@ -220,7 +220,7 @@ function paiWeek(endDate){ const days = [...Array(7)].map((_,i)=>dateKey(addDays
 function paiHtml(){
   const P = paiWeek(new Date()), max = Math.max(20, ...P.days.map(d=>d.v)), lvl = P.value>=100?"g":P.value>=60?"y":"r";
   const bars = P.days.map(d=>{ const dt = fromKey(d.k); return `<div style="display:grid;gap:4px;justify-items:center"><div style="height:64px;width:100%;display:flex;align-items:flex-end"><i style="display:block;width:100%;border-radius:6px 6px 2px 2px;height:${Math.max(3, d.v/max*64)}px;background:${d.v?"var(--strain)":"var(--track)"}"></i></div><span class="small muted mono">${Math.round(d.v)}</span><span class="small muted">${SHORT[dt.getDay()]}</span></div>`; }).join("");
-  return `<div class="card"><div class="spread" style="flex-wrap:nowrap"><div><div class="eyebrow">Heart health</div><h3 style="margin-top:4px">PAI</h3><p class="small muted" style="margin-top:6px">Last 7 days. Goal: stay at 100 or more.</p></div>
+  return `<div class="card">${sechH("PAI", "var(--strain)", "Heart health")}<div class="spread" style="flex-wrap:nowrap"><p class="small muted">Last 7 days. Goal: stay at 100 or more.</p>
     ${ring(P.value/100, REC_COLOR[lvl], 92, 9, String(P.value), "of 100", 26)}</div>
     <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">${bars}</div>
     <p class="small muted">${P.value>=100 ? "At 100 or more you are in the range large studies link with clearly lower heart risk." : `${Math.max(0,100-P.value)} points missing. Easiest: one run with 20 min in zone 3 or higher.`} ${P.fromHr ? "Calculated from your all day heart rate with the thresholds of your watch (89, 115, 154 bpm). Close to the watch, not identical." : "Own estimate from your watch workouts, so it can differ from the PAI on your watch."}</p>
@@ -229,7 +229,7 @@ function paiHtml(){
 function vo2Html(){
   const E = vo2Estimate(); if(!E) return "";
   const vo = Object.entries(health.days).filter(([,v])=>v.vo2).sort().slice(-60).map(([k,v])=>[k,v.vo2]);
-  return `<div class="card"><div class="spread"><div><div class="eyebrow">Fitness</div><h3 style="margin-top:4px">VO2max</h3></div>
+  return `<div class="card">${sechH("VO2max", "var(--run)", "Fitness")}<div class="spread"><div></div>
     <div style="text-align:right"><div style="font-family:var(--display);font-size:40px;font-weight:700;line-height:1">${E.value.toFixed(0)}</div><div class="small muted mono">range ${E.lo} to ${E.hi} ml/kg/min</div></div></div>
     <div style="display:grid;gap:10px">${E.parts.map(p=>`<div class="src"><span>${esc(p.t)} <span class="muted small">· weight ${Math.round(p.w*100)}%</span></span><span class="mono">${p.v.toFixed(1)}</span>
       <div class="bar" style="grid-column:1/-1"><i style="width:${clamp((p.v-30)/35*100,2,100)}%;background:var(--strain)"></i></div><span class="w">${esc(p.note)}</span></div>`).join("")}</div>
@@ -238,10 +238,10 @@ function vo2Html(){
 }
 function ageHtml(){
   const A = otiAge();
-  if(!A) return `<div class="card"><h3>Oti Age</h3><p class="small muted">Needs at least 30 days of sleep, heart rate and step data.</p></div>`;
+  if(!A) return `<div class="card">${sechH("Oti Age", "var(--rec-g)")}<p class="small muted">Needs at least 30 days of sleep, heart rate and step data.</p></div>`;
   const big = A.age!=null ? A.age.toFixed(1) : `${A.delta>0?"+":""}${A.delta.toFixed(1)}`;
   const col = A.delta<=0 ? "var(--rec-g)" : A.delta<2 ? "var(--rec-y)" : "var(--rec-r)", pc = A.pace<0.9 ? "var(--rec-g)" : A.pace<=1.1 ? "var(--rec-y)" : "var(--rec-r)";
-  return `<div class="card"><div class="spread"><h3>Oti Age</h3>${A.prelim?`<span class="chip">preliminary · ${A.days}/180 days</span>`:""}</div>
+  return `<div class="card">${sechH("Oti Age", "var(--rec-g)", A.prelim?`preliminary · ${A.days}/180 days`:"")}
     <div class="kv"><div><b style="color:${col}">${big}</b><span>${A.age!=null?`${A.delta>0?"+":""}${A.delta.toFixed(1)} vs real age`:"years vs real age"}</span></div>
       <div><b style="color:${pc}">${A.pace.toFixed(1)}×</b><span>pace of ageing, 30 days</span></div></div>
     ${A.age==null?`<p class="small muted">Add your birth year in Setup to see an age.</p>`:""}
@@ -285,7 +285,7 @@ function journalInsights(){
 }
 function journalHtml(){
   const ins = journalInsights(), ready = ins.filter(x=>x.ready), wait = ins.filter(x=>!x.ready);
-  let h = `<div class="card"><div class="spread"><h3>What moves your recovery</h3><span class="small muted">last 90 days</span></div>
+  let h = `<div class="card">${sechH("What moves your recovery", "var(--rec-g)", "last 90 days")}
     <p class="small muted">Each behaviour from the morning check in, compared with your recovery the next morning. Needs at least 4 days with and 4 without.</p>`;
   if(ready.length) h += `<div style="display:grid;gap:8px">${ready.map(x=>{ const c = Math.abs(x.dR)<3 ? "" : x.dR>0 ? "g" : "r"; const w = clamp(Math.abs(x.dR)/25*100, 4, 100);
     return `<div class="block"><div class="bh"><span class="bn">${esc(x.t)}${x.f?` <span class="chip" style="font-size:10.5px;padding:2px 8px">auto</span>`:""}</span><span class="mono small ${c==="g"?"":""}" style="color:${c==="g"?"var(--rec-g)":c==="r"?"var(--rec-r)":"var(--muted)"}">${x.dR>0?"+":""}${Math.round(x.dR)}%</span></div>

@@ -603,3 +603,88 @@ nav.tabs button{font-size:12px}
 #v-tasks #tkQuickAdd{min-width:48px;min-height:48px}
 #v-tasks .fall,#v-tasks .fhd{min-height:44px}
 #v-tasks .tk-hi{font-size:13px;width:20px;height:20px}
+
+/* ---- Design A, Seite Fitness (16.11.2026): Fortschritt und Schlaf in klaren Blöcken mit Farbmarke, Ringe ohne Kacheln,
+   Zeilen mit Linien statt grauer Kacheln in Karten, Schlafphasen im Rhythmus Block, Schrift mindestens 13 px, Tippflächen 44 px ---- */
+:is(#v-progress,#v-sleep) .card{border:1px solid var(--line)}
+:is(#v-progress,#v-sleep) .card{padding:16px 14px}
+:is(#v-progress,#v-sleep) .sech{display:flex;align-items:center;justify-content:space-between;gap:10px}
+:is(#v-progress,#v-sleep) .sech h3{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+:is(#v-progress,#v-sleep) .sech h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+:is(#v-progress,#v-sleep) .sech > span{font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+/* Schrift mindestens 13 px */
+:is(#v-progress,#v-sleep) :is(.eyebrow,.ring .l,.mini .cap,.pcard .s,.src .w,.kv span,.zlegend,.slegend,.wrow .m,.wrow .vs small,.nrow .m,.lrow .m,th){font-size:13px}
+:is(#v-progress,#v-sleep) .chip{font-size:13px !important}
+#v-progress .f{font-size:13px}
+:is(#v-progress,#v-sleep) .ring .l{letter-spacing:.02em;text-transform:none}
+/* Tippflächen 44 px */
+:is(#v-progress,#v-sleep) .fseg button{min-height:44px;padding-bottom:0}
+:is(#v-progress,#v-sleep) .fall{min-height:44px}
+:is(#v-progress,#v-sleep) .fhd{width:44px;height:44px;min-height:44px;top:6px;right:6px}
+:is(#v-progress,#v-sleep) .fhost [data-fold]:not(.folded):not(details) > .fhd + *,:is(#v-progress,#v-sleep) [data-fold]:not(.folded):not(details) > .fhd + *{padding-right:48px;min-height:32px}
+:is(#v-progress,#v-sleep) details > summary{min-height:44px;display:flex;align-items:center}
+:is(#v-progress,#v-sleep) button.ghost{min-height:44px}
+/* Ringe: keine Kacheln, Linien als Trennung */
+#v-progress .fprings{gap:8px}
+#v-progress .rings-grid{gap:0}
+#v-progress .pcard{background:transparent;box-shadow:none;border-radius:0;padding:14px 6px;border-top:1px solid var(--line)}
+#v-progress .rings-grid .pcard:nth-child(even){border-left:1px solid var(--line)}
+#v-progress .rings-grid .pcard:nth-child(-n+2){border-top:0}
+#v-progress .rings-grid .pcard:last-child:nth-child(odd){border-left:0}
+#v-progress .pcard .t{font-size:15px}
+/* Zeilen statt Kacheln: Trainings, Oti Alter, Nächte */
+:is(#v-progress,#v-sleep) .list{gap:0}
+:is(#v-progress,#v-sleep) :is(.wrow,.lrow,.nrow){background:transparent;border-radius:0;padding:12px 2px;border-top:1px solid var(--line);min-height:56px}
+:is(#v-progress,#v-sleep) .list > :first-child{border-top:0}
+/* Werte nebeneinander mit Linien statt Kacheln */
+:is(#v-progress,#v-sleep) .kv{gap:0}
+:is(#v-progress,#v-sleep) .kv div{background:transparent;border-radius:0;padding:0 0 0 14px;border-left:1px solid var(--line)}
+:is(#v-progress,#v-sleep) .kv div:nth-child(odd){padding-left:0;border-left:0}
+#v-progress .grid2 > div,#v-sleep .grid3 > div{display:grid;gap:2px}
+#v-sleep .grid3{gap:0}
+#v-sleep .grid3 > div{padding-left:14px;border-left:1px solid var(--line)}
+#v-sleep .grid3 > div:first-child{padding-left:0;border-left:0}
+#v-sleep .grid3 .mono{font-size:18px;font-weight:700}
+/* Nachtzeile: Datum und Dauer oben, Zeiten und Phasen darunter über die ganze Breite */
+#v-sleep .nrow .v{grid-row:1}
+#v-sleep .nrow .m{grid-column:1/-1}
+/* Schlaf: Ringe ohne Kacheln, Schlafphasen als Zeilen */
+#v-sleep .minis{gap:0}
+#v-sleep .mini{background:transparent;border-radius:0;padding:4px 6px 8px}
+#v-sleep .mini + .mini{border-left:1px solid var(--line)}
+#v-sleep .mini .cap{color:var(--muted)}
+:is(#v-progress,#v-sleep) .csub{display:grid;border-top:1px solid var(--line)}
+:is(#v-progress,#v-sleep) .csub > div{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;font-size:15px}
+:is(#v-progress,#v-sleep) .csub > div + div{border-top:1px solid var(--line)}
+:is(#v-progress,#v-sleep) .csub > div > span:first-child{color:var(--muted)} :is(#v-progress,#v-sleep) .csub > div > span:last-child{text-align:right;white-space:nowrap}
+/* Hinweisblöcke als Zeilen mit Linien */
+#v-sleep .grid2{gap:0;grid-template-columns:minmax(0,1fr)}
+:is(#v-progress,#v-sleep) .block{background:transparent;border-radius:0;padding:12px 2px;border-top:1px solid var(--line)}
+#v-sleep .card > div[style*="display:grid"] > .block:first-child,#v-sleep .grid2 > .block:first-child{border-top:0}
+:is(#v-progress,#v-sleep) .block{align-content:start}
+#v-sleep .banner{background:color-mix(in srgb,var(--accent) 10%,var(--card))}
+/* Tabelle: Zahlen bleiben in einer Zeile */
+#v-sleep td.num,#v-sleep td:first-child{white-space:nowrap}
+#v-sleep th,#v-sleep td{padding:8px 4px}
+#v-sleep th{letter-spacing:.04em}
+/* Achsen der Diagramme auf dem iPhone lesbar (Diagramme skalieren mit der Breite) */
+@media (max-width:899px){
+  :is(#v-progress,#v-sleep) .chart svg{overflow:visible}
+  :is(#v-progress,#v-sleep) .chart svg text[text-anchor=middle]{font-size:20px;transform:translateY(7px)}
+  :is(#v-progress,#v-sleep) .chart svg text[text-anchor=end]{font-size:19px}
+  :is(#v-progress,#v-sleep) .chart{padding-bottom:6px}
+}
+@media (min-width:900px){
+  :is(#v-progress,#v-sleep) .chart svg{overflow:visible}
+  :is(#v-progress,#v-sleep) .chart svg text{font-size:15px}
+}
+@media (min-width:1000px){
+  #v-progress > .fprings{grid-column:1/-1}
+  #v-progress .rings-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #v-progress .rings-grid .pcard{border-top:0;border-left:1px solid var(--line)}
+  #v-progress .rings-grid .pcard:first-child,#v-progress .rings-grid .pcard:nth-child(4n+1){border-left:0}
+  #v-progress .rings-grid .pcard:nth-child(n+5){border-top:1px solid var(--line)}
+  #v-progress .rings-grid .pcard:last-child:nth-child(odd){grid-column:auto}
+  #v-sleep .grid2{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}
+  #v-sleep .grid2 > .block:nth-child(2){border-top:0}
+}
