@@ -365,15 +365,17 @@ function renderToday(){
   const tile = (id, title, pct, col, val, sub, extra) => `<button type="button" class="btile" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why"><span class="bt">${title}</span><div class="rrow">${ring(pct, col, 76, 8, val, "", 19)}</div>${extra||""}<span class="bs">${sub}</span></button>`;
   const bsum = [R.score!=null?`${L("Recovery","Erholung")} ${R.score}%`:"", sm?`${L("Sleep","Schlaf")} ${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"", yStrain!=null?`Strain ${yStrain.toFixed(1)}`:"", `Protein ${prot}/${pt} g`].filter(Boolean).join(" · ");
   const calmRing = (id, title, pct, col, val, sub) => `<button type="button" class="cring" data-dial="${id}" aria-expanded="${openDial===id}" aria-controls="why">${ring(pct, col, 72, 6, val, "", 18)}<span class="crt">${title}</span><span class="crs">${sub}</span></button>`;
-  html += `<section class="card calm" aria-label="${L("Body today","Körper heute")}"><div class="crings">
-    ${calmRing("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in","Check in") : ({g:L("green","grün"),y:L("yellow","gelb"),r:L("red","rot")})[R.level]||"")}
-    ${calmRing("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", st0?`${L("deep","Tief")} ${dur(st0.deep)} · REM ${dur(st0.rem)}`:L("not synced","nicht da"))}
-    ${calmRing("strain", L("Strain","Strain"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", `${L("target","Ziel")} ${tgt[0]} ${L("to","bis")} ${tgt[1]}`)}
-    <div class="cring"><div>${ring(prot/pt, "var(--protein)", 72, 6, `${prot}`, "", 18)}</div><span class="crt">Protein</span><span class="crs">/ ${pt} g</span></div>
+  html += `<section class="card calm" aria-label="${L("Body today","Körper heute")}"><div class="sech" style="--c:${REC_COLOR[R.level]||"var(--muted)"}"><h3>${L("Body","Körper")}</h3></div><div class="crings">
+    ${calmRing("rec", L("Recovery","Erholung"), R.score==null?0:R.score/100, REC_COLOR[R.level]||"var(--muted)", R.score==null?"–":`${R.score}<span style="font-size:.55em">%</span>`, R.score==null? L("check in","Check in") : "")}
+    ${calmRing("sleep", L("Sleep","Schlaf"), sm?sm/profile.asleepNeed:0, "var(--sleep)", sm?`${Math.floor(sm/60)}:${pad(Math.round(sm%60))}`:"–", sm?"":L("not synced","nicht da"))}
+    ${calmRing("strain", L("Strain","Strain"), yStrain!=null? yStrain/21 : 0, "var(--strain)", yStrain!=null?yStrain.toFixed(1):"–", "")}
+    <div class="cring"><div>${ring(prot/pt, "var(--protein)", 72, 6, `${prot}`, "", 18)}</div><span class="crt">Protein</span><span class="crs"></span></div>
   </div>
+  <div class="csub">${st0?`<div><span>${L("Sleep stages","Schlafphasen")}</span><span>${L("deep","Tief")} ${dur(st0.deep)} · REM ${dur(st0.rem)}</span></div>`:""}<div><span>${L("Targets","Ziele")}</span><span>${L("Strain","Belastung")} ${tgt[0]} ${L("to","bis")} ${tgt[1]} · Protein ${pt} g</span></div></div>
+  <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div></section>
+  <section class="card cprotc" aria-label="Protein"><div class="sech" style="--c:var(--protein)"><h3>Protein</h3><span>${prot} ${L("of","von")} ${pt} g</span></div>
   <div class="cprot">${[20,30,40].map(g=>`<button type="button" class="ghost" data-prot="${g}">+${g} g</button>`).join("")}<button type="button" class="ghost" data-prot="-10" aria-label="${L("Remove 10 g","10 g abziehen")}">−10</button></div>
-  ${k >= (profile.creatineFrom||"9999") ? `<div class="ccrea"><div><b>${L("Creatine 5 g","Kreatin 5 g")}</b><span class="small muted">${lg.crea?L("taken today","heute genommen"):L("with a meal or water","zum Essen oder mit Wasser")}</span></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="${L("Creatine taken","Kreatin genommen")}">${CHECK_SVG}</button></div>` : ""}
-  <div class="why" id="why" ${openDial?"":"hidden"}>${why}</div></section>`;
+  ${k >= (profile.creatineFrom||"9999") ? `<div class="ccrea"><div><b>${L("Creatine 5 g","Kreatin 5 g")}</b><span class="small muted">${lg.crea?L("taken today","heute genommen"):L("with a meal or water","zum Essen oder mit Wasser")}</span></div><button type="button" class="check mbc ${lg.crea?"on":""}" id="creaCheck" aria-pressed="${!!lg.crea}" aria-label="${L("Creatine taken","Kreatin genommen")}">${CHECK_SVG}</button></div>` : ""}</section>`;
   html += calHtml;
   // strain is a ring again (Oti 04.11.2026)
   // ---- morning briefing, read aloud on tap ----
@@ -466,7 +468,7 @@ function renderToday(){
   const moreOpen = foldGet("today-more-open");
   html += `<details class="tmore" id="tMore" ${moreOpen?"open":""}><summary><span>${L("More today","Mehr heute")}</span><span class="small muted">${L("movement, rhythm, tomorrow","Bewegung, Rhythmus, Morgen")}</span></summary><div class="tmorein">${more}</div></details>`;
   $("#v-today").innerHTML = html;
-  { const st = $("#calmSt"); if(st) st.textContent = coachLine; }
+  { const st = $("#calmSt"); if(st){ st.textContent = coachLine; st.dataset.lv = R.ill ? "r" : R.score==null ? "" : (R.level||""); } }
   { const t = $("#tMore"); if(t) t.addEventListener("toggle", ()=>foldSet("today-more-open", t.open)); }
 
   document.querySelectorAll("#v-today [data-dial]").forEach(b=>b.onclick = ()=>{ openDial = openDial===b.dataset.dial ? null : b.dataset.dial; renderToday(); injectTodayTasks(); });

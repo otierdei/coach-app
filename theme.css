@@ -499,3 +499,50 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* ---- Impeccable Funde 07.11.2026: Datum als h2 (keine Stufe uebersprungen), Woche unter dem Datum statt Kicker darueber ---- */
 #v-today h2.calmdate{text-transform:none}
 #v-today .calmwk{margin:4px 0 0;font-size:13px;font-weight:600;color:var(--muted)}
+
+/* ---- Design A (16.11.2026, Oti: "A mit mehr Kreisen, klare Abtrennungen, kein Orange"): Akzent Weinrot statt Orange,
+   Today in klaren Blöcken mit Überschrift, kleinste Schrift 13 px (Leiste 12 px). Letzte Schicht, überschreibt Pigment. ---- */
+:root{--accent:#8C2F45;--accent-ink:#7A2639;--on-accent:#FFFFFF;--hero:#EBD9DD;--hero-muted:#6B4F56;--hero-accent:#7A2639;--strain:#7A2639;--lift:#7A2639;--s-awake:#8C2F45;--z5:#7A2639}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--accent:#E08A9C;--accent-ink:#E9A3B1;--on-accent:#15110D;--hero:#3A1F27;--hero-muted:#CDB3BA;--hero-accent:#E9A3B1;--strain:#E08A9C;--lift:#E08A9C;--s-awake:#D97F92;--z5:#E08A9C}}
+:root[data-theme="dark"]{--accent:#E08A9C;--accent-ink:#E9A3B1;--on-accent:#15110D;--hero:#3A1F27;--hero-muted:#CDB3BA;--hero-accent:#E9A3B1;--strain:#E08A9C;--lift:#E08A9C;--s-awake:#D97F92;--z5:#E08A9C}
+nav.tabs button{font-size:12px}
+/* Blocküberschrift mit kleiner Farbmarke */
+#v-today .sech{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#v-today .sech h3,#v-today .tcal h3{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-today .sech h3::before,#v-today .tcal h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+#v-today .sech > span{font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+/* Zustand als getönter Balken */
+#v-today .calmst{max-width:none;font-size:16px;font-weight:600;color:var(--ink);border-radius:16px;padding:12px 14px;background:var(--card);border:1px solid var(--line)}
+#v-today .calmst:empty{display:none}
+#v-today .calmst[data-lv=g]{--c:var(--rec-g)} #v-today .calmst[data-lv=y]{--c:var(--rec-y)} #v-today .calmst[data-lv=r]{--c:var(--rec-r)}
+#v-today .calmst[data-lv=g],#v-today .calmst[data-lv=y],#v-today .calmst[data-lv=r]{background:color-mix(in srgb,var(--c) 15%,var(--card));border-color:color-mix(in srgb,var(--c) 40%,var(--card))}
+/* Körper: ein Block, Ringe ohne eigene Kacheln, Zeilen darunter */
+#v-today .card.calm{background:var(--card);padding:16px 14px;gap:12px;border:1px solid var(--line)}
+#v-today .cring,#v-today .cring[aria-expanded=true]{background:transparent;padding:4px 2px}
+#v-today .cring[aria-expanded=true] .crt{text-decoration:underline;text-underline-offset:3px}
+#v-today .cring .crt{font-size:13px} #v-today .cring .crs{font-size:13px} #v-today .cring .crs:empty{display:none}
+#v-today .csub{display:grid;border-top:1px solid var(--line)}
+#v-today .csub > div{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;font-size:15px}
+#v-today .csub > div + div{border-top:1px solid var(--line)}
+#v-today .csub > div > span:first-child{color:var(--muted)} #v-today .csub > div > span:last-child{text-align:right}
+#v-today .card.cprotc{display:grid;gap:12px;padding:16px 14px;border:1px solid var(--line)}
+#v-today .cprot button{min-height:44px;font-size:15px}
+#v-today .cprotc .ccrea{padding:12px 2px 0}
+/* Heute: Abtrennung und "jetzt" hinterlegt */
+#v-today .card.tcal,#v-today .tmore,#v-today .card.thero{border:1px solid var(--line)}
+#v-today .agenda .ae{font-size:13px}
+#v-today .agenda li.now{background:color-mix(in srgb,var(--accent) 10%,var(--card));border-radius:12px;border-top-color:transparent;margin:0 -8px;padding-inline:8px}
+#v-today .agenda li.now + li{border-top-color:transparent}
+@media (min-width:900px){ #v-today > .cprotc{align-self:start} }
+/* Design A: gleiche Blocküberschrift für alle Karten auf Today, kleinste Schrift 13 px, Tippflächen mindestens 44 px */
+#v-today .card > .spread > h3{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-today .card > .spread > h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+#v-today .eyebrow,#v-today .tnums span,#v-today .f,#v-today .m,#v-today .rt,#v-today .calmhd .fall{font-size:13px}
+#v-today button.ghost,#v-today .calmhd .fall,#v-today .fhd,#v-today .rule{min-height:44px}
+#v-today .tfold{min-width:44px;min-height:44px}
+@media (min-width:900px){
+  #v-today > .calm{grid-template-columns:minmax(0,1fr);gap:14px;padding:20px 22px}
+  #v-today > .calm .crings{max-width:640px}
+  #v-today > .calm .cprot{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #v-today > .cprotc{padding:20px 22px}
+}
