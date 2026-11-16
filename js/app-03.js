@@ -66,22 +66,22 @@ function stageBar(st, big){
   const tot = st.deep+st.rem+st.light+st.awake || 1, w = x => (x/tot*100).toFixed(1)+"%";
   return `<div class="sbar${big?" big":""}" role="img" aria-label="Deep ${st.deep} min, REM ${st.rem} min, light ${Math.round(st.light)} min, awake ${st.awake} min"><i style="width:${w(st.deep)};background:var(--s-deep)"></i><i style="width:${w(st.rem)};background:var(--s-rem)"></i><i style="width:${w(st.light)};background:var(--s-light)"></i>${st.awake?`<i style="width:${w(st.awake)};background:var(--s-awake)"></i>`:""}</div>`;
 }
-const SLEGEND = `<div class="slegend"><span><i style="background:var(--s-deep)"></i>Deep</span><span><i style="background:var(--s-rem)"></i>REM</span><span><i style="background:var(--s-light)"></i>Light</span><span><i style="background:var(--s-awake)"></i>Awake</span></div>`;
+const SLEGEND = () => `<div class="slegend"><span><i style="background:var(--s-deep)"></i>${L("Deep","Tief")}</span><span><i style="background:var(--s-rem)"></i>REM</span><span><i style="background:var(--s-light)"></i>${L("Light","Leicht")}</span><span><i style="background:var(--s-awake)"></i>${L("Awake","Wach")}</span></div>`;
 function nightLabel(k){ return fromKey(k).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}); }
 function nightGrade(k){
   const v = health.days[k]||{}, need = profile.asleepNeed, sm = v.sleepMin||0, B = baselines(fromKey(k));
   let pts = sm >= need-15 ? 2 : sm >= need-60 ? 1 : 0;
   if(v.hrv && B.hrv){ if(v.hrv/B.hrv >= 1.05) pts++; else if(v.hrv/B.hrv < 0.85) pts--; }
   if(sm < need-45) pts = Math.min(pts, 1);
-  return pts >= 2 ? {c:"g", t:"Good"} : pts === 1 ? {c:"y", t:"OK"} : {c:"r", t:"Poor"};
+  return pts >= 2 ? {c:"g", t:L("Good","Gut")} : pts === 1 ? {c:"y", t:"OK"} : {c:"r", t:L("Poor","Schwach")};
 }
 function nightsHtml(nights){
   if(!nights.length) return "";
   const rows = [...nights].reverse().map(([k,v])=>{ const st = stagesOf(v), g = nightGrade(k);
-    return `<button type="button" class="nrow" data-night="${k}"><span class="t">${esc(nightLabel(k))}</span><span class="m">${fmt(v.onset)} to ${fmt(v.wakeAt)}${st?` · deep ${st.deep} · REM ${st.rem}`:""}</span><span class="v"><span class="chip ${g.c}" style="padding:2px 8px">${g.t}</span>${dur(v.sleepMin||0)}</span><span class="sb">${stageBar(st)}</span></button>`; });
-  return `<div class="card">${sechH("Nights", "var(--sleep)", "tap a night")}${SLEGEND}
+    return `<button type="button" class="nrow" data-night="${k}"><span class="t">${esc(nightLabel(k))}</span><span class="m">${fmt(v.onset)} ${L("to","bis")} ${fmt(v.wakeAt)}${st?` · ${L("deep","Tief")} ${st.deep} · REM ${st.rem}`:""}</span><span class="v"><span class="chip ${g.c}" style="padding:2px 8px">${g.t}</span>${dur(v.sleepMin||0)}</span><span class="sb">${stageBar(st)}</span></button>`; });
+  return `<div class="card">${sechH(L("Nights","Nächte"), "var(--sleep)", L("tap a night","Nacht antippen"))}${SLEGEND()}
     <div class="list">${rows.slice(0,7).join("")}</div>
-    ${rows.length>7?`<details><summary>Older nights (${rows.length-7})</summary><div class="list" style="margin-top:8px">${rows.slice(7).join("")}</div></details>`:""}</div>`;
+    ${rows.length>7?`<details><summary>${L("Older nights","Ältere Nächte")} (${rows.length-7})</summary><div class="list" style="margin-top:8px">${rows.slice(7).join("")}</div></details>`:""}</div>`;
 }
 function nightFeedback(k){
   const v = health.days[k]||{}, d = fromKey(k), need = profile.asleepNeed, sm = v.sleepMin||0, st = stagesOf(v), B = baselines(d);
@@ -114,7 +114,7 @@ function openNight(k){
   let body = `<div class="row"><span class="chip ${g.c}"><span class="dot"></span>${g.t}</span><span class="small muted mono">${fmt(v.onset)} to ${fmt(v.wakeAt)}</span></div>
     <div class="kv">${cell(dur(v.sleepMin||0), "asleep")}${cell(v.hrv?Math.round(v.hrv)+" ms":"–", `HRV${B.hrv?` · normal ${Math.round(B.hrv)}`:""}`)}${cell(v.rhr?v.rhr+" bpm":"–", `resting pulse${B.rhr?` · normal ${Math.round(B.rhr)}`:""}`)}${cell(v.hrn?v.hrn+" bpm":"–", "lowest night pulse")}</div>`;
   if(st){ const tot = st.deep+st.rem+st.light+st.awake, p = x => Math.round(x/tot*100)+"%";
-    body += `<div style="display:grid;gap:8px"><div class="eyebrow">Sleep zones</div>${stageBar(st,true)}${SLEGEND}
+    body += `<div style="display:grid;gap:8px"><div class="eyebrow">Sleep zones</div>${stageBar(st,true)}${SLEGEND()}
       <div class="kv">${cell(dur(st.deep), `deep · ${p(st.deep)}`)}${cell(dur(st.rem), `REM · ${p(st.rem)}`)}${cell(dur(Math.round(st.light)), `light · ${p(st.light)}${st.est?" (estimated)":""}`)}${cell(st.awake?dur(st.awake):"–", "awake")}</div></div>`; }
   else body += `<div class="banner">No sleep zones for this night yet. They load from your daily upload file in Google Drive; open the app again in a minute if the night is recent.</div>`;
   body += `<div style="display:grid;gap:8px"><div class="eyebrow">Feedback</div><div class="nfb">${nightFeedback(k).map(x=>`<p>${esc(x)}</p>`).join("")}</div></div>`;
@@ -166,7 +166,7 @@ function renderProgress(){
   const stS = [...Array(42)].map((_,i)=>dateKey(addDays(now,-(42-i)))).map(k=>[k, strainFor(k)]).filter(p=>p[1]!=null);
   if(stS.length>1) html += `<div class="card">${sechH("Strain", "var(--load)")}${lineChart(stS,"Strain","","var(--load)")}<p class="small muted">0 to 21, from heart rate zones of your watch workouts plus steps. Green days: aim 14 to 18, yellow 10 to 14, red under 9.</p></div>`;
   if(kc.length>1) html += `<div class="card">${sechH("Active calories", "var(--week)")}${lineChart(kc,"Active calories","kcal","var(--week)")}<p class="small muted">Estimated by your watch. Treat it as a trend, not an exact number: wrist estimates are often 20 to 30% off.</p></div>`;
-  if(wt.length>1) html += `<div class="card">${sechH("Weight", "var(--ink-2)")}${lineChart(wt,"Weight","kg","var(--ink-2)")}<p class="small muted">Recomposition: expect the scale to stay within about 1 kg while strength numbers rise.</p></div>`;
+  if(wt.length>1) html += `<div class="card">${sechH(L("Weight","Gewicht"), "var(--ink-2)")}${lineChart(wt,L("Weight","Gewicht"),"kg","var(--ink-2)")}<p class="small muted">${L("Recomposition: expect the scale to stay within about 1 kg while strength numbers rise.","Rekomposition: Die Waage bleibt voraussichtlich im Bereich von etwa 1 kg, während deine Kraftwerte steigen.")}</p></div>`;
   $("#v-progress").innerHTML = html;
   bindTips("#v-progress");
   const wall = (health.workouts||[]).filter(w=>w.type!=="Walk").slice().sort((a,b)=>(a.date+(a.start||""))<(b.date+(b.start||""))?1:-1);
@@ -225,16 +225,18 @@ function renderSetup(){
 }
 function collectTemplate(){ document.querySelectorAll("#v-setup [data-f]").forEach(inp=>{ const r = profile.week[inp.dataset.d]?.[Number(inp.dataset.i)]; if(r) r[inp.dataset.f] = inp.value; }); }
 function sleepChart(nights){
-  const W=620,H=250,L=44,R=10,T=12,B=28; const y0=20*60, y1=35*60; // 20:00 to 11:00 next day
+  const W=chartW(),H=W<620?230:250,L=44,R=10,T=30,B=28; const y0=20*60, y1=35*60; // 20:00 to 11:00 next day
   const y = m => T + (m - y0)/(y1-y0)*(H-T-B);
   const n = nights.length, bw = Math.max(4, Math.min(14, (W-L-R)/n - 4)), x = i => L + (i+0.5)*(W-L-R)/n;
   let g = "";
-  for(let t=y0;t<=y1;t+=180){ g += `<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${fmt(t)}</text>`; }
+  for(let t=y0;t<=y1;t+=180){ g += `<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" font-size="13" fill="var(--muted)" font-family="var(--mono)">${fmt(t)}</text>`; }
   const wa = toMin(profile.wake)+1440;
-  g += `<line x1="${L}" x2="${W-R}" y1="${y(wa)}" y2="${y(wa)}" stroke="var(--ink-2)" stroke-dasharray="4 4" stroke-width="1.5"/><text x="${W-R}" y="${y(wa)-5}" text-anchor="end" font-size="11" fill="var(--ink-2)">wake anchor</text>`;
+  g += `<line x1="${L}" x2="${W-R}" y1="${y(wa)}" y2="${y(wa)}" stroke="var(--ink-2)" stroke-dasharray="4 4" stroke-width="1.5"/>`;
+  // Legende über der Zeichenfläche, damit die Beschriftung keine Balken verdeckt (16.11.2026)
+  g += `<line x1="${L}" x2="${L+22}" y1="11" y2="11" stroke="var(--ink-2)" stroke-dasharray="4 4" stroke-width="1.5"/><text x="${L+28}" y="16" text-anchor="start" font-size="13" fill="var(--ink-2)">wake anchor</text>`;
   const bars = nights.map(([k,v],i)=>{ let on=v.onset, wk=v.wakeAt+1440; if(on<720) on+=1440; on=Math.max(on,y0); wk=Math.min(wk,y1);
     return `<rect data-night="${k}" style="cursor:pointer" data-tip="${esc(fromKey(k).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}))}: ${fmt(v.onset)} to ${fmt(v.wakeAt)} · ${dur(v.sleepMin||0)}" x="${x(i)-bw/2}" y="${y(on)}" width="${bw}" height="${Math.max(2,y(wk)-y(on))}" rx="3" fill="var(--sleep)"/>`; }).join("");
-  const lbl = nights.map(([k],i)=> (i%Math.ceil(n/6)===0||i===n-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--mono)">${fromKey(k).getDate()}.${fromKey(k).getMonth()+1}</text>`:"").join("");
+  const ls = Math.ceil(n/6), lbl = nights.map(([k],i)=> ((i%ls===0 && n-1-i>=ls/2)||i===n-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="var(--mono)">${fromKey(k).getDate()}.${fromKey(k).getMonth()+1}</text>`:"").join("");
   return `<div class="chart" data-chart><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sleep windows for the last ${n} nights">${g}${bars}${lbl}</svg><div class="tip" hidden></div></div><p class="small muted">Each bar is one night, from falling asleep (top) to waking (bottom). Tap a bar for details.</p>`;
 }
 const ZC = ["var(--z1)","var(--z2)","var(--z3)","var(--z4)","var(--z5)"];  // heart rate zones, warm ramp (23.10.2026)

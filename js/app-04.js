@@ -2,17 +2,19 @@
    db, mcp and sample are provided by api.js (Google Apps Script backend).
    The code is split into several classic scripts that share one global scope; load them in order. */
 function vdot(t){ const m = t/60, v = 5000/m; const vo = -4.6 + 0.182258*v + 0.000104*v*v; const pct = 0.8 + 0.1894393*Math.exp(-0.012778*m) + 0.2989558*Math.exp(-0.1932605*m); return vo/pct; }
+// Design A Reste (16.11.2026): Diagramme auf dem iPhone in echter Kartenbreite zeichnen, damit 13 px Achsenschrift auch sichtbar 13 px ist
+function chartW(){ if(innerWidth>=900) return 620; const v = document.querySelector("section.view:not([hidden])"), w = v ? v.clientWidth - 30 : 0; return w>200 ? Math.min(620, Math.round(w)) : 620; }
 function lineChart(points, label, unit, color){ color = color || "var(--load)";
-  const W=620,H=200,L=40,R=12,T=14,B=28; const vals = points.map(p=>p[1]);
+  const W=chartW(),H=W<620?170:200,L=40,R=12,T=14,B=28; const vals = points.map(p=>p[1]);
   let lo = Math.floor(Math.min(...vals)-2), hi = Math.ceil(Math.max(...vals)+2);
   const n = points.length, x = i => L + (n===1?0.5:i/(n-1))*(W-L-R), y = v => T + (hi-v)/(hi-lo)*(H-T-B);
   let g = ""; const step = Math.max(1, Math.round((hi-lo)/4));
-  for(let v=lo; v<=hi; v+=step) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--mono)">${v}</text>`;
+  for(let v=lo; v<=hi; v+=step) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="13" fill="var(--muted)" font-family="var(--mono)">${v}</text>`;
   const d = points.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
   const area = d + `L${x(n-1)},${H-B}L${x(0)},${H-B}Z`;
   const last = points[n-1];
   const hits = points.map((p,i)=>`<rect data-tip="${esc(fromKey(p[0]).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}: ${Math.round(p[1])} ${unit}" x="${x(i)-(W-L-R)/n/2}" y="${T}" width="${(W-L-R)/n}" height="${H-T-B}" fill="transparent"/>`).join("");
-  const lbl = points.map((p,i)=> (i%Math.ceil(n/6)===0||i===n-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--mono)">${fromKey(p[0]).getDate()}.${fromKey(p[0]).getMonth()+1}</text>`:"").join("");
+  const ls = Math.ceil(n/6), lbl = points.map((p,i)=> ((i%ls===0 && n-1-i>=ls/2)||i===n-1)?`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="var(--mono)">${fromKey(p[0]).getDate()}.${fromKey(p[0]).getMonth()+1}</text>`:"").join("");
   return `<div class="chart" data-chart><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${g}<path d="${area}" fill="${color}" opacity=".12"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/><circle cx="${x(n-1)}" cy="${y(last[1])}" r="4.5" fill="${color}" stroke="var(--card)" stroke-width="2"/>${lbl}${hits}</svg><div class="tip" hidden></div></div>`;
 }
 function bindTips(root){

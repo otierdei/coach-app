@@ -764,3 +764,52 @@ nav.tabs button{font-size:12px}
   #v-life .ptw .pw-rule > .pw-trio{grid-column:1/-1;max-width:640px;margin-bottom:8px}
   #v-life .murings .rings-grid{max-width:640px}
 }
+
+/* ---- Design A, Reste (16.11.2026): Today "Mehr heute" und Tagesablauf, Woche (Coach fragen, Zeitleiste am Mac),
+   Diagrammachsen auf dem iPhone, Training und Einstellungen. Schrift mindestens 13 px, Tippflächen 44 px. ---- */
+/* Today: Knöpfe mit Inline Höhe (Aufgaben ›, Rule of Life ›) und Klappzeilen auf 44 px */
+#v-today button.ghost{min-height:44px !important}
+#v-today details > summary{min-height:44px}
+/* Today: Prozentzeichen im Ring, Aufgabenzeilen in "Top 3 heute", Regel Chips */
+#v-today .ring .v > span{font-size:13px !important}
+#v-today :is(.tk-m,.tk-p){font-size:13px}
+#v-today .tk-hi{font-size:13px;width:20px;height:20px}
+#v-today .tk-side .chip{font-size:13px !important}
+#v-today .rule{font-size:13px}
+/* Tagesablauf (Today und Tagesplan): Uhrzeiten, freie Zeit und Zeiten in Blöcken 13 px, Marker mit 44 px Tippfläche */
+.dcal .hl{width:46px;font-size:13px;padding-right:3px;background:transparent}
+.dcal .hr{left:48px}
+.dcal .gap{font-size:13px}
+.cblk .cm{font-size:13px}
+.dcal .mk{left:22px;width:44px;height:44px;border:0;background:transparent;box-sizing:border-box}
+.dcal .mk::before{inset:auto;left:14px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--c);border:2px solid var(--card)}
+/* Woche: Aufklapper "Coach fragen" */
+#v-week .wkcoach > summary{min-height:44px}
+/* Woche am Mac: Zeitleiste mit 13 px, Blöcke einzeilig mit Auslassung, Raster etwas höher, damit 30 Minuten eine Zeile fassen */
+@media (min-width: 1000px){
+  #v-week .tlg{min-height:720px}
+  #v-week .tlhours .tlg span{font-size:13px;right:2px;font-variant-numeric:tabular-nums}
+  #v-week .tlb{font:600 13px/1.25 var(--body);padding:2px 6px;white-space:nowrap;text-overflow:ellipsis}
+  #v-week .tla{font-size:13px;min-height:28px}
+}
+/* Fitness: Diagramme werden auf dem iPhone in echter Breite gezeichnet (chartW), Achsenschrift 13 px ohne Hochskalieren */
+@media (max-width:899px){
+  :is(#v-progress,#v-sleep) .chart svg text[text-anchor]{font-size:13px;transform:none}
+  :is(#v-progress,#v-sleep) .chart{padding-bottom:0}
+}
+@media (min-width:900px){
+  :is(#v-progress,#v-sleep) .chart svg text{font-size:16px}
+}
+/* Training: Kopfzeilen, Feldbeschriftungen, Klappzeile "Training heute ändern" */
+#v-train :is(.trmeta span,.f,.small,.eyebrow,.m){font-size:13px}
+#v-train details > summary{min-height:44px;display:flex;align-items:center}
+/* Einstellungen: Schrift 13 px, Kartenüberschriften als Blocküberschrift */
+#v-setup :is(.eyebrow,.f,.small,.m){font-size:13px}
+#v-setup .f :is(input,select,textarea){font-size:15px}
+#v-setup .chip{font-size:13px !important}
+#v-setup .card > h3,#v-setup .card > .spread > h3{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-setup .card > h3::before,#v-setup .card > .spread > h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+#v-setup .card{border:1px solid var(--line)}
+@media (min-width: 1000px){
+  #v-week .tlc.today .tlh{box-shadow:none;background:color-mix(in srgb,var(--accent) 13%,var(--card));color:var(--accent-ink)}
+}
