@@ -56,8 +56,8 @@ function renderWeek(){
       <h2>${mon.toLocaleDateString(L("en-GB","de-DE"),{day:"numeric",month:"short"})} ${L("to","bis")} ${addDays(mon,6).toLocaleDateString(L("en-GB","de-DE"),{day:"numeric",month:"short"})}</h2></div>
       <div class="row" style="gap:6px;flex-wrap:nowrap"><button class="rbtn" id="wkPrev" aria-label="${L("Previous week","Vorige Woche")}">‹</button><button class="rbtn" id="wkNext" aria-label="${L("Next week","Nächste Woche")}">›</button></div></div>
     <div class="row wkacts">${weekOffset?`<button class="ghost" id="wkNow">${L("This week","Diese Woche")}</button>`:""}<button class="ghost" id="wkAdd">+ ${L("Event","Termin")}</button><button class="ghost" id="wkMic" aria-label="${L("Ask the assistant","Assistent fragen")}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg> ${L("Assistant","Assistent")}</button></div>
-    <div class="wkstats"><div><b>${wc.done}<small> / ${wc.planned}</small></b><span>${L("trainings","Trainings")}</span></div><div><b>${Math.round(lesMin/60)} h</b><span>${L("lessons","Unterricht")}</span></div>
-      <div><b style="color:var(--sleep)">${sAvg?dur(sAvg):"–"}</b><span>${L("sleep avg","Schlaf Ø")}${dAvg?` · Deep ${dur(dAvg)} · REM ${dur(rAvg)}`:""}</span></div></div>
+    <section class="card wkover" aria-label="${L("Overview","Überblick")}"><div class="sech"><h3>${L("Overview","Überblick")}</h3></div><div class="wkstats"><div><b>${wc.done}<small> / ${wc.planned}</small></b><span>${L("trainings","Trainings")}</span></div><div><b>${Math.round(lesMin/60)} h</b><span>${L("lessons","Unterricht")}</span></div>
+      <div><b style="color:var(--sleep)">${sAvg?dur(sAvg):"–"}</b><span>${L("sleep avg","Schlaf Ø")}</span></div></div>${dAvg?`<div class="csub"><div><span>${L("Sleep stages avg","Schlafphasen Ø")}</span><span>${L("deep","Tief")} ${dur(dAvg)} · REM ${dur(rAvg)}</span></div></div>`:""}</section>
     ${!inRange?`<div class="banner">${L("Calendar events load for this and next week only. Later weeks show training only.","Termine werden nur für diese und nächste Woche geladen. Spätere Wochen zeigen nur das Training.")}</div>`:""}`;
 
   // iPhone: agenda, every day opens
@@ -97,9 +97,9 @@ function renderWeek(){
   const timeline = `<div class="wktl"><div class="tlhours"><div class="tlh"></div><div class="tlad"></div><div class="tlg">${hours}</div></div>${cols}</div>`;
 
   // "Ask the coach" moved here from Today (Oti 23.10.): it reviews the week
-  const coach = `<details class="card" data-fold="coach"><summary>${L("Ask the coach","Coach fragen")}</summary><p class="small muted">${L("Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.","Schickt dein Profil, die letzten 14 Tage und den Wochenplan an Claude für eine ehrliche Bewertung. Nutzt dein Claude Kontingent.")}</p>
+  const coach = `<details class="card wkcoach" data-fold="coach"><summary>${L("Ask the coach","Coach fragen")}</summary><p class="small muted">${L("Sends your profile, the last 14 days and this week's plan to Claude for a blunt review. Uses your Claude usage.","Schickt dein Profil, die letzten 14 Tage und den Wochenplan an Claude für eine ehrliche Bewertung. Nutzt dein Claude Kontingent.")}</p>
     <button id="btnCoach">${L("Review my week","Meine Woche bewerten")}</button><div id="coachOut" class="coach-out" data-notr hidden></div></details>`;
-  $("#v-week").innerHTML = head + `<div class="wkagenda">${agenda}</div>` + timeline + coach;
+  $("#v-week").innerHTML = head + `<section class="card wkagenda" aria-label="${L("Days","Tage")}"><div class="sech" style="--c:var(--strain)"><h3>${L("Days","Tage")}</h3></div>${agenda}</section>` + timeline + coach;
   { const bc = $("#btnCoach"); if(bc) bc.onclick = askCoach; }
   const v = $("#v-week");
   $("#wkPrev").onclick = ()=>{weekOffset--;render();}; $("#wkNext").onclick = ()=>{weekOffset++;render();}; const wn = $("#wkNow"); if(wn) wn.onclick = ()=>{weekOffset=0;render();};

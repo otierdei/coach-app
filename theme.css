@@ -546,3 +546,36 @@ nav.tabs button{font-size:12px}
   #v-today > .calm .cprot{grid-template-columns:repeat(4,minmax(0,1fr))}
   #v-today > .cprotc{padding:20px 22px}
 }
+
+/* ---- Design A, Seite Woche (16.11.2026): Überblick als ein Block, Tage als ein Block mit Linien statt sieben Karten,
+   heute getönt statt umrandet, Schrift mindestens 13 px, Tippflächen 44 px ---- */
+#v-week .sech{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#v-week .sech h3{margin:0;display:flex;align-items:center;gap:8px;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+#v-week .sech h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--accent));flex:none}
+#v-week .eyebrow{font-size:13px}
+#v-week .wkacts button,#v-week .wkadd{min-height:44px}
+#v-week .rbtn{min-width:44px;min-height:44px}
+#v-week .card.wkover{display:grid;gap:12px;padding:16px 14px;border:1px solid var(--line)}
+#v-week .wkstats{gap:0}
+#v-week .wkstats>div{background:transparent;border-radius:0;padding:0 0 0 14px;border-left:1px solid var(--line);gap:2px}
+#v-week .wkstats>div:first-child{padding-left:0;border-left:0}
+#v-week .wkstats b{font-size:22px} #v-week .wkstats b small{font-size:13px}
+#v-week .wkstats span{font-size:13px}
+#v-week .csub{display:grid;border-top:1px solid var(--line)}
+#v-week .csub > div{display:flex;justify-content:space-between;gap:12px;padding:9px 2px 0;font-size:15px}
+#v-week .csub > div > span:first-child{color:var(--muted)} #v-week .csub > div > span:last-child{text-align:right}
+#v-week .card.wkagenda{gap:0;padding:16px 14px 6px;border:1px solid var(--line)}
+#v-week .wkagenda .sech{padding-bottom:8px}
+#v-week .wkday{background:transparent;border-radius:0;border-top:1px solid var(--line)}
+#v-week .wkagenda .sech + .wkday{border-top:0}
+#v-week .wkday>summary{padding:12px 2px;min-height:56px}
+#v-week .wkday.today{box-shadow:none;background:color-mix(in srgb,var(--accent) 10%,var(--card));border-radius:14px;border-top-color:transparent;margin:0 -8px;padding:0 8px}
+#v-week .wkday.today + .wkday{border-top-color:transparent}
+#v-week .wkday .wd small{font-size:13px;letter-spacing:.04em}
+#v-week .wkday .wtr{font-size:16px}
+#v-week .wkday .wsub,#v-week .wkday .wtag{font-size:13px}
+#v-week .wkday.today .wtag{color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 13%,var(--card));border-radius:999px;padding:3px 10px}
+#v-week .wkbody{padding:0 0 12px 56px}
+#v-week .wkrow .wt,#v-week .wkrow .wn small,#v-week .wkrow .wr{font-size:13px}
+#v-week .wkrow .wn{font-size:15px}
+#v-week .wkcoach{border:1px solid var(--line)}
