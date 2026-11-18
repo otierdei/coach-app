@@ -70,9 +70,9 @@ function openCalItem(id){
     <div class="kv"><div><b>${fmt(it.s)}</b><span>start</span></div><div><b>${fmt(it.e)}</b><span>end</span></div><div><b>${dur(len)}</b><span>duration</span></div></div>`;
   if(it.kind==="move"){ openSheet(tr("Movement break"), body + mbBody(d, it.mb) + back); return; }
   if(it.kind==="train"){
-    const s = it.session, def = s.def;
+    const s = it.session, def = withAlt(s.def, dateKey(d.date));   // chosen alternatives of that day (Oti, 18.11.2026)
     body = `<div class="row" style="gap:12px;flex-wrap:nowrap">${tbadge(def.type,"lg")}<div>${def.sub?`<div class="small muted">${esc(def.sub)}</div>`:""}${s.moved?`<div class="small muted">moved from ${esc(s.fromDay)}</div>`:""}</div></div>` + body;
-    body += `<div class="eyebrow">Sets</div><div class="ilist">${def.blocks.map(b=>`<div class="it"><b>${esc(b.n)}${b.s>1?`<span class="muted" style="font-weight:500"> · ${b.s} sets</span>`:""}</b><span>${esc(b.d)}</span></div>`).join("")}</div>`;
+    body += `<div class="eyebrow">Sets</div><div class="ilist">${def.blocks.map(b=>`<div class="it"><b>${esc(b.n)}${b.s>1?`<span class="muted" style="font-weight:500"> · ${b.s} sets</span>`:""}</b>${b.altOf?`<span class="small muted"><span>${L("Instead of","Statt")}</span> <span>${esc(b.altOf)}</span></span>`:""}<span>${esc(b.d)}</span></div>`).join("")}</div>`;
     if(it.ctx!=="week" && dateKey(d.date)===dateKey(new Date())) body += `<button type="button" class="primary" data-gotrain="1">Open today's training</button>`;
   } else {
     const src = it.src==="tmpl" ? "Weekly template (Setup)" : "Google Calendar";

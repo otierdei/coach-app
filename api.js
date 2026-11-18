@@ -93,6 +93,9 @@
   function merge3(base, server, mine){
     if(same(mine, base)) return server;
     if(same(server, base)) return mine;
+    // both sides created the same object since the last read (18.11.2026: two devices add the first extra set of a day):
+    // merge them against an empty base instead of letting one copy replace the other
+    if(base == null && isObj(server) && isObj(mine)) base = {};
     if(isObj(base) && isObj(server) && isObj(mine)){
       const out = {};
       for(const k of new Set([...Object.keys(server), ...Object.keys(mine)])){

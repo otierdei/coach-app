@@ -31,3 +31,76 @@ Object.assign(DE, {"Easy run + strides":"Lockerer Lauf + Steigerungen","Day befo
 "Short night after the evening match: keep your wake time and take a {0} min nap before {1} instead of sleeping in.":"Kurze Nacht nach dem Abendspiel: Weckzeit halten und vor {1} ein {0} min Nickerchen statt Ausschlafen.",
 "Copenhagen plank":"Copenhagen Plank","Copenhagen plank set {0}":"Copenhagen Plank Satz {0}","{0} s per side, knee version first (groin injury prevention for soccer)":"{0} s pro Seite, zuerst die Knievariante (Leistenschutz für Fußball)",
 "Match day: hard stop at {0}. Late coffee plus an evening match pushes your sleep past midnight.":"Spieltag: harter Stopp um {0}. Später Kaffee plus Abendspiel schiebt deinen Schlaf über Mitternacht."});
+// Kraft Alternativen und Zusatzsätze (Oti, 18.11.2026): names, texts, labels
+(function(){
+  const N = {"Single leg Romanian deadlift":"Einbeiniges Rumänisches Kreuzheben","Squat jumps + skater hops":"Strecksprünge + Skater Sprünge","Band assisted pull ups":"Klimmzüge mit Band",
+    "Inverted rows under the table":"Rudern unter dem Tisch","Reverse lunges":"Ausfallschritte rückwärts","Step ups onto the chair":"Step ups auf den Stuhl","Skater squats":"Skater Squats",
+    "Cossack squats":"Cossack Squats","Band hamstring curl":"Beinbeuger Curl mit Band","Band adductor pull":"Adduktorenzug mit Band","Band hammer curls":"Hammer Curls mit Band","Dead bug":"Dead Bug",
+    "Band resisted push ups":"Liegestütze mit Band","DB floor press":"KH Bodendrücken","DB or band overhead press":"KH oder Band Schulterdrücken","Chair dips":"Dips am Stuhl",
+    "Close grip push ups":"Enge Liegestütze","Band assisted chin ups":"Klimmzüge im Untergriff mit Band","Band rows":"Rudern mit Band","Band triceps pushdown":"Trizepsdrücken mit Band",
+    "Band curls":"Curls mit Band","Lying leg raises":"Beinheben im Liegen","Dead hang":"Toter Hang"};
+  // originals keep their German names from above; the extra set labels need them too
+  const O = ["Broad jumps + lateral bounds","Pull ups","Bulgarian split squat","Pistol progression","Copenhagen plank","Hammer curls","Hollow body hold","Push ups","Decline push ups (feet on chair)","Archer push ups","Pike push ups","Dips","Chin ups","DB overhead triceps extension","DB curls","Hanging knee raises","False grip hang"];
+  for(const en of O) if(DE[en] != null) N[en] = DE[en]; else N[en] = en;
+  for(const [en, de] of Object.entries(N)){
+    if(DE[en] == null) DE[en] = de;
+    if(DE[en+" set {0}"] == null) DE[en+" set {0}"] = de+" Satz {0}";
+    DE[en+" set {0} reduced"] = de+" Satz {0} reduziert";
+    DE[en+" extra set {0}"] = de+" Zusatzsatz {0}"; DE[en+" extra set {0} reduced"] = de+" Zusatzsatz {0} reduziert";
+  }
+})();
+Object.assign(DE, {
+  "{0} squat jumps, then {1} skater hops per side, full intent, soft landing, {2} s rest (little space needed)":"{0} Strecksprünge, dann {1} Skater Sprünge pro Seite, voll explosiv, weich landen, {2} s Pause (wenig Platz nötig)",
+  "{0} reps, loop band over the bar under one knee, strict, {1} s lowering, {2} min rest":"{0} Wiederholungen, Loop Band über die Stange und unter ein Knie, sauber, {1} s absenken, {2} min Pause",
+  "{0} to {1} reps under a sturdy table, body straight, chest to the edge, {2} min rest":"{0} bis {1} Wiederholungen unter einem stabilen Tisch, Körper gerade, Brust zur Tischkante, {2} min Pause",
+  "{0} to {1} reps under a sturdy table, body straight, chest to the edge, {2} s pause at the top, {3} min rest":"{0} bis {1} Wiederholungen unter einem stabilen Tisch, Körper gerade, Brust zur Tischkante, {2} s Pause oben, {3} min Pause",
+  "{0} per leg, bodyweight, step back":"{0} pro Bein, Körpergewicht, Schritt nach hinten",
+  "{0} per leg, {1} s lowering, dumbbell at your chest":"{0} pro Bein, {1} s absenken, Kurzhantel vor der Brust",
+  "{0} per leg with the dumbbell, pause at the bottom, then drive up":"{0} pro Bein mit der Kurzhantel, unten pausieren, dann kraftvoll hoch",
+  "{0} per leg onto a sturdy chair, push through the front heel":"{0} pro Bein auf einen stabilen Stuhl, über die vordere Ferse hochdrücken",
+  "{0} per leg, {1} s lowering":"{0} pro Bein, {1} s absenken",
+  "{0} per leg holding the dumbbell, slow lowering, no push off the back foot":"{0} pro Bein mit der Kurzhantel, langsam absenken, kein Abdruck vom hinteren Fuß",
+  "{0} per leg, back knee down to a cushion":"{0} pro Bein, hinteres Knie bis auf ein Kissen",
+  "{0} per leg, back knee lightly to the floor":"{0} pro Bein, hinteres Knie leicht zum Boden",
+  "{0} per leg, {1} s lowering, arms forward":"{0} pro Bein, {1} s absenken, Arme nach vorn",
+  "{0} per side, hold the door frame":"{0} pro Seite, am Türrahmen festhalten",
+  "{0} per side, free, heel stays down":"{0} pro Seite, frei, Ferse bleibt unten",
+  "{0} per side, dumbbell at your chest":"{0} pro Seite, Kurzhantel vor der Brust",
+  "{0} per leg @ {1} kg, {2} s lowering, hips square, soft knee":"{0} pro Bein @ {1} kg, {2} s absenken, Hüfte gerade, Knie leicht gebeugt",
+  "{0} per leg @ {1} kg, {2} s lowering, {3} s pause at the bottom":"{0} pro Bein @ {1} kg, {2} s absenken, {3} s Pause unten",
+  "{0} per leg @ {1} kg, {2} s lowering, then stand up powerfully":"{0} pro Bein @ {1} kg, {2} s absenken, dann kraftvoll aufrichten",
+  "{0} per leg, band low on the door anchor, lying on your stomach, curl in {1} s, lower in {2} s":"{0} pro Bein, Band unten am Türanker, in Bauchlage, in {1} s anbeugen, in {2} s ablassen",
+  "{0} per leg, lower in {1} s":"{0} pro Bein, in {1} s ablassen",
+  "{0} per leg, {1} s hold at the top, lower in {2} s":"{0} pro Bein, {1} s oben halten, in {2} s ablassen",
+  "{0} per side, band at ankle height on the door anchor, pull the leg across in {1} s, back in {2} s":"{0} pro Seite, Band auf Knöchelhöhe am Türanker, Bein in {1} s vor das Standbein ziehen, in {2} s zurück",
+  "{0} to {1}, stand on the band, palms facing each other, {2} s lowering":"{0} bis {1}, auf dem Band stehen, Handflächen zueinander, {2} s absenken",
+  "{0} per side, lower back pressed to the floor, {1} s reach":"{0} pro Seite, unterer Rücken am Boden, {1} s langsam strecken",
+  "{0} to {1} reps, band across the upper back, ends under the hands":"{0} bis {1} Wiederholungen, Band über dem oberen Rücken, Enden unter den Händen",
+  "{0} to {1} reps, {2} s lowering":"{0} bis {1} Wiederholungen, {2} s absenken",
+  "{0} to {1} reps, {2} s pause at the bottom":"{0} bis {1} Wiederholungen, {2} s Pause unten",
+  "{0} per arm @ {1} kg, elbows about {2} degrees, {3} s lowering":"{0} pro Arm @ {1} kg, Ellbogen etwa {2} Grad, {3} s absenken",
+  "{0} to {1} per arm @ {2} kg or a band under your feet, ribs down":"{0} bis {1} pro Arm @ {2} kg oder ein Band unter den Füßen, Rippen unten",
+  "{0} to {1} per arm, {2} s lowering":"{0} bis {1} pro Arm, {2} s absenken",
+  "{0} to {1} per arm, seated on the chair, strict":"{0} bis {1} pro Arm, auf dem Stuhl sitzend, sauber",
+  "{0} to {1} reps, hands on a sturdy chair behind you, knees bent, upper arms to level":"{0} bis {1} Wiederholungen, Hände auf einem stabilen Stuhl hinter dir, Knie gebeugt, Oberarme bis waagerecht",
+  "{0} to {1} reps, hands on a sturdy chair behind you, legs straight, upper arms to level":"{0} bis {1} Wiederholungen, Hände auf einem stabilen Stuhl hinter dir, Beine gestreckt, Oberarme bis waagerecht",
+  "{0} to {1} reps, hands under the shoulders, elbows close to the body":"{0} bis {1} Wiederholungen, Hände unter den Schultern, Ellbogen eng am Körper",
+  "{0} reps, loop band over the bar under one knee, underhand, {1} s lowering":"{0} Wiederholungen, Loop Band über die Stange und unter ein Knie, Untergriff, {1} s absenken",
+  "{0} to {1}, band on the door anchor at chest height, elbows back, {2} s squeeze":"{0} bis {1}, Band am Türanker auf Brusthöhe, Ellbogen nach hinten, {2} s halten",
+  "{0} to {1}, band high on the door anchor, elbows at your sides, {2} s back up":"{0} bis {1}, Band oben am Türanker, Ellbogen am Körper, {2} s zurück nach oben",
+  "{0} to {1}, stand on the band, palms up, {2} s lowering":"{0} bis {1}, auf dem Band stehen, Handflächen nach oben, {2} s absenken",
+  "{0} reps, lower back pressed down, {1} s lowering":"{0} Wiederholungen, unterer Rücken am Boden, {1} s absenken",
+  "{0} s, full grip, shoulders active, no swinging":"{0} s, voller Griff, Schultern aktiv, ohne Schwung",
+  "Held: alternative done last time.":"Gehalten: letztes Mal die Alternative gemacht.",
+  "Alternative {0}":"Alternative {0}"
+});
+Object.assign(DE, {"Broad jumps + lateral bounds":"Weitsprünge + seitliche Sprünge","Broad jumps + lateral bounds set {0}":"Weitsprünge + seitliche Sprünge Satz {0}",
+  "{0} broad jumps, then {1} bounds per side, full intent, {2} s rest (soccer power)":"{0} Weitsprünge, dann {1} seitliche Sprünge pro Seite, voll explosiv, {2} s Pause (Kraft für Fußball)",
+  "{0} to {1} reps on the parallel bars at the calisthenics park (two chairs if you train at home), full depth":"{0} bis {1} Wiederholungen am Barren im Calisthenics Park (zu Hause zwei Stühle), volle Tiefe",
+  "False grip hang":"False Grip Hang","False grip hang set {0}":"False Grip Hang Satz {0}",
+  "{0} s, wrists over the bar, shoulders pulled down (muscle up prep)":"{0} s, Handgelenke über der Stange, Schultern nach unten gezogen (Vorbereitung Muscle up)",
+  "{0} × {1}: strict, but pull the last {2} sets explosively to the chest (muscle up prep), {3} min rest":"{0} × {1}: sauber, aber die letzten {2} Sätze explosiv zur Brust ziehen (Vorbereitung Muscle up), {3} min Pause",
+  "{0} per leg, bodyweight (legs still sore: keep {1} reps in reserve, skip if stairs still hurt)":"{0} pro Bein, Körpergewicht (Beine noch müde: {1} Wiederholungen in Reserve, weglassen, wenn Treppen noch weh tun)",
+  "{0} per leg, {1} s lowering (legs still sore: keep {2} reps in reserve, skip if stairs still hurt)":"{0} pro Bein, {1} s absenken (Beine noch müde: {2} Wiederholungen in Reserve, weglassen, wenn Treppen noch weh tun)",
+  "{0} per leg, pause at the bottom, then explode (legs still sore: keep {1} reps in reserve, skip if stairs still hurt)":"{0} pro Bein, unten pausieren, dann explosiv hoch (Beine noch müde: {1} Wiederholungen in Reserve, weglassen, wenn Treppen noch weh tun)"});
+(function(){ for(const en of ["Broad jumps + lateral bounds","False grip hang"]){ const de = DE[en]; DE[en+" set {0} reduced"] = de+" Satz {0} reduziert"; DE[en+" extra set {0}"] = de+" Zusatzsatz {0}"; DE[en+" extra set {0} reduced"] = de+" Zusatzsatz {0} reduziert"; } })();

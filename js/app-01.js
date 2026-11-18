@@ -161,6 +161,8 @@ function progHistory(id, beforeKey){
     const states = [...Array(e.sets)].map((_,i)=>st[`${e.sk}:${e.bi}:${i}`]);
     if(!states.some(Boolean)) continue;                       // session not trained that day
     gapRule(k); last = k;
+    // alternative chosen that day (Oti, 18.11.2026): counts as trained, but its reps never move the original's progression
+    if(L.alt && L.alt[`${e.sk}:${e.bi}`]){ note = "Held: alternative done last time."; continue; }
     if(e.dl){ note = "Held: deload week."; continue; }
     if((e.lvl==="y" || e.lvl==="r") && !e.full){ note = `Held: ${e.lvl==="y"?"yellow":"red"} day.`; continue; }
     const full = states.every(x=>x===true), rir = L.rir?.[e.sk];
@@ -193,7 +195,7 @@ function progSig(){
   const days = logData.days||{};
   if(progSigCache.at === logRev) return progSigCache.v;
   let s = (profile.blockStart||"") + JSON.stringify(profile.tests||[]) + ":";
-  for(const k of Object.keys(days)){ const L = days[k]; if(!L.prog) continue; s += k + JSON.stringify(L.prog) + JSON.stringify(L.rir||{}) + (L.form||"") + (L.fullPlan?"F":"");
+  for(const k of Object.keys(days)){ const L = days[k]; if(!L.prog) continue; s += k + JSON.stringify(L.prog) + JSON.stringify(L.rir||{}) + JSON.stringify(L.alt||{}) + (L.form||"") + (L.fullPlan?"F":"");
     for(const e of Object.values(L.prog)) for(let i=0;i<e.sets;i++) s += String(L.sets?.[`${e.sk}:${e.bi}:${i}`] ?? "-"); s += ";"; }
   progSigCache = {at:logRev, v:String(hashStr(s))}; return progSigCache.v;
 }
@@ -284,7 +286,7 @@ function preMatchDef(){ const P = paces();
     {n:"4 × 10 s strides", d:"Smoothly speed up to about 90 %, walk back, 1 min rest. Quick and relaxed, never strained: fresh legs for tomorrow.", s:4}]}); }
 function afterFootball(def){ const d = structuredClone(def);
   // Copenhagen stays with 2 sets (Hero League plan, Oti 14.11.2026): groin protection once a week, little leg fatigue
-  d.blocks = d.blocks.filter(b=>!/Slider leg curl|Nordic|Pistol|Broad jump/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : /Copenhagen/.test(b.n)? {...b, s:Math.min(b.s,2)} : b);
+  d.blocks = d.blocks.filter(b=>!/Romanian deadlift|Pistol|Broad jump/.test(b.n)).map(b=>/Bulgarian/.test(b.n)? {...b, s:2, d:b.d+" (legs tired from football: 2 sets only)"} : /Copenhagen/.test(b.n)? {...b, s:Math.min(b.s,2)} : b);
   d.sub = "Pull + arms, light legs after football"; return finishDef(d); }
 // compact strength (Oti, 19.10.2026): when the normal session does not fit its day (Monday lessons now start 13:00),
 // one set less on every exercise with 3 or more sets and no core finisher, so it fits 11:10 to 12:00 before lunch
@@ -315,7 +317,7 @@ function weekIndex(date){ return Math.floor((mondayOf(date) - mondayOf(fromKey(p
 const DELOAD = w => w===4 || w===8;
 // Strength A+B in one session (Oti, 21.10.2026): when a strength day is lost, the next one combines both.
 // Main lifts of A (pull ups) and B (push variation) keep their sets and progression, everything else 2 sets
-// (pike 3), no jumps, pistols, slider curls, chin ups, curls or core finishers, so it stays about 65 min.
+// (pike 3), no jumps, pistols, hamstring work, chin ups, curls or core finishers, so it stays about 65 min.
 function comboDef(w){
   const A = sessionDef("strengthA", w), B = sessionDef("strengthB", w);
   const pick = (D, re, cap, extra) => { const b = D.blocks.find(x=>re.test(x.n)); if(!b) return null; const c = structuredClone(b);
@@ -379,16 +381,30 @@ function sessionDef(key, w){
     const pr = progReps("pullups", Math.max(2, Math.round(maxPU*0.55) + (dl?-1:0)), Math.max(3, Math.round(maxPU*0.75)), wkStart, dl);
     const pu = pr.reps;
     if(key==="strengthA"){
+      // alternatives (Oti, 18.11.2026): home kit only (loop and resistance bands with a door anchor, dumbbells, chair, table, pull up bar).
+      // Nordic curls stay out for good (no heel anchor). Alternative texts never start with "N × " so set trims elsewhere stay correct.
       d = {name:"Strength A", sub:"Pull + legs", hard:true, min:60, type:"strength", blocks:[
-        {n:"Broad jumps + lateral bounds", d:"5 broad jumps, then 5 bounds per side, full intent, 90 s rest (soccer power)", s:dl?2:3},
-        {n:"Pull ups", d: wb>=5 ? `${sets} × ${pu}: strict, but pull the last 2 sets explosively to the chest (muscle up prep), 2 min rest` : `${sets} × ${pu} strict, 2 min rest`, s:sets, prog:{id:"pullups", reps:pu, note:pr.note}},
-        {n:"Bulgarian split squat", d:["12 per leg, bodyweight","10 per leg, 3 s lowering","8 per leg, pause at the bottom, then explode"][phase], s:dl?2:3},
-        {n:"Pistol progression", d:["Box pistol to knee height, 5 per leg","Box pistol to a lower box, 5 per leg","Pistol holding a door frame, 4 per leg"][phase], s:3},
-        // Nordic curls replaced 11.11.2026 (Oti: no way to anchor the heels); slider leg curls, eccentric hamstring work without an anchor
-        {n:"Slider leg curls", d:["8 reps, both legs: heels on a towel or in socks on a smooth floor, hips up, slide out in 3 s, pull back in","5 per leg: slide out on one leg in 4 s, pull back in with both","5 per leg, single leg out and in, hips stay up"][phase], s:3},
-        {n:"Copenhagen plank", d:`${[15,20,25][phase]} s per side, knee version first (groin injury prevention for soccer)`, s:dl?2:3},
-        {n:"Hammer curls", d:`8 to 10 @ ${dbKg()} kg`, s:3},
-        {n:"Hollow body hold", d:`${30+phase*10} s`, s:3}]};
+        {n:"Broad jumps + lateral bounds", d:"5 broad jumps, then 5 bounds per side, full intent, 90 s rest (soccer power)", s:dl?2:3,
+          alt:[{n:"Squat jumps + skater hops", d:"5 squat jumps, then 5 skater hops per side, full intent, soft landing, 90 s rest (little space needed)"}]},
+        {n:"Pull ups", d: wb>=5 ? `${sets} × ${pu}: strict, but pull the last 2 sets explosively to the chest (muscle up prep), 2 min rest` : `${sets} × ${pu} strict, 2 min rest`, s:sets, prog:{id:"pullups", reps:pu, note:pr.note},
+          alt:[{n:"Band assisted pull ups", d:`${pu+2} reps, loop band over the bar under one knee, strict, 3 s lowering, 2 min rest`},
+               {n:"Inverted rows under the table", d:`${[8,10,10][phase]} to ${[10,12,12][phase]} reps under a sturdy table, body straight, chest to the edge${phase===2?", 2 s pause at the top":""}, 2 min rest`}]},
+        {n:"Bulgarian split squat", d:["12 per leg, bodyweight","10 per leg, 3 s lowering","8 per leg, pause at the bottom, then explode"][phase], s:dl?2:3,
+          alt:[{n:"Reverse lunges", d:["12 per leg, bodyweight, step back","10 per leg, 3 s lowering, dumbbell at your chest","8 per leg with the dumbbell, pause at the bottom, then drive up"][phase]},
+               {n:"Step ups onto the chair", d:["10 per leg onto a sturdy chair, push through the front heel","8 per leg, 3 s lowering","8 per leg holding the dumbbell, slow lowering, no push off the back foot"][phase]}]},
+        {n:"Pistol progression", d:["Box pistol to knee height, 5 per leg","Box pistol to a lower box, 5 per leg","Pistol holding a door frame, 4 per leg"][phase], s:3,
+          alt:[{n:"Skater squats", d:["5 per leg, back knee down to a cushion","5 per leg, back knee lightly to the floor","4 per leg, 3 s lowering, arms forward"][phase]},
+               {n:"Cossack squats", d:["6 per side, hold the door frame","6 per side, free, heel stays down","5 per side, dumbbell at your chest"][phase]}]},
+        // hamstrings (Oti, 18.11.2026): single leg Romanian deadlift with one dumbbell replaces the slider leg curls at the same place,
+        // so block order, block count and the tick keys of earlier days stay the same
+        {n:"Single leg Romanian deadlift", d:[`8 per leg @ ${dbKg()} kg, 3 s lowering, hips square, soft knee`,`8 per leg @ ${dbKg()} kg, 4 s lowering, 1 s pause at the bottom`,`6 per leg @ ${dbKg()} kg, 5 s lowering, then stand up powerfully`][phase], s:3,
+          alt:[{n:"Band hamstring curl", d:["12 per leg, band low on the door anchor, lying on your stomach, curl in 1 s, lower in 3 s","10 per leg, lower in 4 s","8 per leg, 2 s hold at the top, lower in 5 s"][phase]}]},
+        {n:"Copenhagen plank", d:`${[15,20,25][phase]} s per side, knee version first (groin injury prevention for soccer)`, s:dl?2:3,
+          alt:[{n:"Band adductor pull", d:`${[12,15,15][phase]} per side, band at ankle height on the door anchor, pull the leg across in 1 s, back in 3 s`}]},
+        {n:"Hammer curls", d:`8 to 10 @ ${dbKg()} kg`, s:3,
+          alt:[{n:"Band hammer curls", d:"12 to 15, stand on the band, palms facing each other, 2 s lowering"}]},
+        {n:"Hollow body hold", d:`${30+phase*10} s`, s:3,
+          alt:[{n:"Dead bug", d:`${[8,10,12][phase]} per side, lower back pressed to the floor, 3 s reach`}]}]};
     } else {
       const pvBase = [["Push ups", Math.max(8,Math.round(maxPush*0.6)+(dl?-3:0)), Math.round(maxPush*0.75)],
                       ["Decline push ups (feet on chair)", Math.max(6,Math.round(maxPush*0.45)+(dl?-3:0)), Math.round(maxPush*0.6)],
@@ -397,14 +413,25 @@ function sessionDef(key, w){
       const pk = progReps("pike"+(phase===0?0:1), dl?6:8, 12, wkStart, dl);
       const cu = progReps("chinups", Math.max(3,Math.round(maxPU*0.5)) + (dl?-1:0), Math.max(4, Math.round(maxPU*0.75)), wkStart, dl);
       d = {name:"Strength B", sub:"Push + arms", hard:true, min:60, type:"strength", blocks:[
-        {n:pvBase[0], d:`${sets} × ${pp.reps}${phase===2?" per side":""}`, s:sets, prog:{id:"push"+phase, reps:pp.reps, note:pp.note}},
-        {n:"Pike push ups", d:phase===0?`${pk.reps} reps`:`${pk.reps} reps, feet elevated`, s:4, prog:{id:"pike"+(phase===0?0:1), reps:pk.reps, note:pk.note}},
-        {n:"Dips", d:`${[6,8,10][phase]} to ${[8,10,12][phase]} reps on the parallel bars at the calisthenics park (two chairs if you train at home), full depth`, s:3},
-        {n:"Chin ups", d:`${cu.reps} reps, underhand`, s:3, prog:{id:"chinups", reps:cu.reps, note:cu.note}},
-        {n:"DB overhead triceps extension", d:`10 to 12 @ ${dbKg()} kg, one dumbbell`, s:3},
-        {n:"DB curls", d:`8 to 10 @ ${dbKg()} kg`, s:3},
-        {n:"Hanging knee raises", d:phase===2?"10, try 3 toes to bar":"10 reps", s:3},
-        {n:"False grip hang", d:"20 s, wrists over the bar, shoulders pulled down (muscle up prep)", s:3}]};
+        {n:pvBase[0], d:`${sets} × ${pp.reps}${phase===2?" per side":""}`, s:sets, prog:{id:"push"+phase, reps:pp.reps, note:pp.note},
+          alt:[{n:"Band resisted push ups", d:["8 to 12 reps, band across the upper back, ends under the hands","8 to 10 reps, 2 s lowering","6 to 8 reps, 2 s pause at the bottom"][phase]},
+               {n:"DB floor press", d:`${["12","10","8"][phase]} per arm @ ${dbKg()} kg, elbows about 45 degrees, 2 s lowering`}]},
+        {n:"Pike push ups", d:phase===0?`${pk.reps} reps`:`${pk.reps} reps, feet elevated`, s:4, prog:{id:"pike"+(phase===0?0:1), reps:pk.reps, note:pk.note},
+          alt:[{n:"DB or band overhead press", d:[`10 to 12 per arm @ ${dbKg()} kg or a band under your feet, ribs down`,`8 to 10 per arm, 3 s lowering`,`8 to 10 per arm, seated on the chair, strict`][phase]}]},
+        {n:"Dips", d:`${[6,8,10][phase]} to ${[8,10,12][phase]} reps on the parallel bars at the calisthenics park (two chairs if you train at home), full depth`, s:3,
+          alt:[{n:"Chair dips", d:`${[8,10,12][phase]} to ${[10,12,15][phase]} reps, hands on a sturdy chair behind you, ${phase===2?"legs straight":"knees bent"}, upper arms to level`},
+               {n:"Close grip push ups", d:`${[8,10,12][phase]} to ${[10,12,15][phase]} reps, hands under the shoulders, elbows close to the body`}]},
+        {n:"Chin ups", d:`${cu.reps} reps, underhand`, s:3, prog:{id:"chinups", reps:cu.reps, note:cu.note},
+          alt:[{n:"Band assisted chin ups", d:`${cu.reps+2} reps, loop band over the bar under one knee, underhand, 3 s lowering`},
+               {n:"Band rows", d:"12 to 15, band on the door anchor at chest height, elbows back, 2 s squeeze"}]},
+        {n:"DB overhead triceps extension", d:`10 to 12 @ ${dbKg()} kg, one dumbbell`, s:3,
+          alt:[{n:"Band triceps pushdown", d:"12 to 15, band high on the door anchor, elbows at your sides, 2 s back up"}]},
+        {n:"DB curls", d:`8 to 10 @ ${dbKg()} kg`, s:3,
+          alt:[{n:"Band curls", d:"12 to 15, stand on the band, palms up, 2 s lowering"}]},
+        {n:"Hanging knee raises", d:phase===2?"10, try 3 toes to bar":"10 reps", s:3,
+          alt:[{n:"Lying leg raises", d:`${phase===2?12:10} reps, lower back pressed down, 3 s lowering`}]},
+        {n:"False grip hang", d:"20 s, wrists over the bar, shoulders pulled down (muscle up prep)", s:3,
+          alt:[{n:"Dead hang", d:"30 s, full grip, shoulders active, no swinging"}]}]};
     }
   }
   d.sessionKey = key; if(dl) d.deload = true;
@@ -685,17 +712,45 @@ function trainingDone(k, def){ const st = logData.days[k]?.sets || {}; return de
 function watchConfirmed(k){ const L = logData.days[k]; return !!(L?.autoDone && L.auto && Object.keys(L.auto).length); }
 function isDone(k, def){ return !!logData.days[k]?.done?.[def.sessionKey] || watchConfirmed(k); }
 // short technique videos: opens a YouTube search for a good tutorial (no fixed video that could disappear)
-const HOWTO = [[/broad jump/i,"broad jump lateral bound technique"],[/pull ups/i,"strict pull up technique tutorial"],[/chin ups/i,"chin up technique tutorial"],[/bulgarian/i,"bulgarian split squat bodyweight technique"],[/pistol/i,"box pistol squat progression tutorial"],[/slider leg curl/i,"slider hamstring curl towel bodyweight tutorial"],[/copenhagen/i,"copenhagen plank knee version tutorial"],[/hammer curl/i,"dumbbell hammer curl technique"],[/db curls/i,"dumbbell curl technique"],[/hollow/i,"hollow body hold tutorial"],[/archer push/i,"archer push up progression tutorial"],[/decline push/i,"decline push up technique"],[/pike push/i,"pike push up tutorial"],[/^push ups/i,"perfect push up technique"],[/^dips/i,"parallel bar dips technique"],[/overhead triceps/i,"dumbbell overhead triceps extension technique"],[/hanging knee/i,"hanging knee raise technique"],[/false grip/i,"false grip hang muscle up tutorial"],[/warm up \+ mobility/i,"5 minute full body warm up mobility routine"]];
+const HOWTO = [[/broad jump/i,"broad jump lateral bound technique"],[/pull ups/i,"strict pull up technique tutorial"],[/chin ups/i,"chin up technique tutorial"],[/bulgarian/i,"bulgarian split squat bodyweight technique"],[/pistol/i,"box pistol squat progression tutorial"],[/romanian deadlift/i,"single leg romanian deadlift dumbbell technique"],[/copenhagen/i,"copenhagen plank knee version tutorial"],[/hammer curl/i,"dumbbell hammer curl technique"],[/db curls/i,"dumbbell curl technique"],[/hollow/i,"hollow body hold tutorial"],[/archer push/i,"archer push up progression tutorial"],[/decline push/i,"decline push up technique"],[/pike push/i,"pike push up tutorial"],[/^push ups/i,"perfect push up technique"],[/^dips/i,"parallel bar dips technique"],[/overhead triceps/i,"dumbbell overhead triceps extension technique"],[/hanging knee/i,"hanging knee raise technique"],[/false grip/i,"false grip hang muscle up tutorial"],[/warm up \+ mobility/i,"5 minute full body warm up mobility routine"]];
 function howto(n){ const h = HOWTO.find(([re])=>re.test(n)); return h ? `<a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(h[1])}" target="_blank" rel="noopener" style="color:var(--lift);font-weight:600;text-decoration:none;white-space:nowrap">▶ Video</a>` : ""; }
+/* ---- alternatives and extra sets (Oti, 18.11.2026) ----
+   Both live in the log doc of the day, keyed "<sessionKey>:<block index>" exactly like the set ticks, and both remember the
+   original exercise name, so a changed plan for that day (compact, after football) never shows them on another exercise:
+     L.alt[key] = {o:"<original name>", a:"<alternative name>"}       the alternative chosen for that day
+     L.xs[key]  = {o:"<original name>", n:<count>, t:{"0":true|"r"}}   extra sets; never needed for "session done"
+   Plain objects keyed by id: the three way merge of the log in api.js merges them per key like L.sets. Logs without them stay valid. */
+const blkKey = (sk, bi) => `${sk}:${bi}`;
+function altFor(L, sk, bi, b){ const a = L && L.alt && L.alt[blkKey(sk,bi)]; if(!a || !b || !Array.isArray(b.alt) || a.o !== b.n) return null; return b.alt.find(x=>x.n===a.a) || null; }
+function xsFor(L, sk, bi, b){ const x = L && L.xs && L.xs[blkKey(sk,bi)]; return x && b && x.o === b.n && Number(x.n) > 0 ? x : null; }
+const isExBlock = b => !/warm up|mobility|cool down|break the fast/i.test(b.n);
+function defLines(d){ return d.blocks.filter(b=>!b.skip).map(b=>`${b.n}${b.s>1?` (${b.s} sets)`:""}: ${b.d}`); }
+// the def as trained that day: chosen alternatives replace name and text (tick keys and set counts stay the same)
+function withAlt(def, k){
+  const L = logData.days[k]; if(!def || !L || !L.alt) return def;
+  let ch = false; const blocks = def.blocks.map((b,bi)=>{ const a = altFor(L, def.sessionKey, bi, b); if(!a) return b; ch = true;
+    return {...b, n:a.n, d:a.d + (/ \(easy\)$/.test(b.d) ? " (easy)" : ""), altOf:b.n, prog:undefined}; });
+  if(!ch) return def; const d = {...def, blocks}; d.lines = defLines(d); return d;
+}
+// the progression entry of a block, written when you tick the original (never for an alternative)
+function progMark(L, def, bi){ const b = def.blocks[bi]; if(!b || !b.prog || altFor(L, def.sessionKey, bi, b)) return;
+  L.prog = L.prog||{}; L.prog[b.prog.id] = {sk:def.sessionKey, bi:Number(bi), sets:b.s, reps:b.prog.reps, lvl: L.form, dl: !!def.deload, full: !!L.fullPlan}; }
 function blocksHtml(def, k){
-  const s = logData.days[k]?.sets || {}, str = def.type==="strength";
+  const Lg = logData.days[k] || {}, s = Lg.sets || {}, str = def.type==="strength";
   return def.blocks.map((b,bi)=>{
     if(b.skip) return "";
-    let on = 0; const boxes = [...Array(b.s)].map((_,i)=>{ const id=`${def.sessionKey}:${bi}:${i}`, v = s[id], c=!!v, rd = v==="r"; if(c) on++;
-      return `<button class="check ${c?"on":""} ${rd?"rd":""}" data-k="${k}" data-id="${id}" aria-pressed="${c}" aria-label="${esc(b.n)} set ${i+1}${rd?" reduced":""}"><span class="n">${i+1}</span>${rd?`<span class="rdm">−</span>`:CHECK_SVG}</button>`; }).join("");
-    const note = b.prog?.note ? `<div class="small" style="color:var(--lift);margin-top:2px">${esc(b.prog.note)}</div>` : "";
-    return `<div class="block ${on===b.s?"done":""}"><div class="bh"><span class="bn">${esc(b.n)}</span><span class="row" style="gap:10px;flex-wrap:nowrap">${str?howto(b.n):""}<span class="small muted mono">${on}/${b.s}</span></span></div><div class="bd">${esc(b.d)}</div>${note}<div class="sets">${boxes}</div></div>`;
-  }).join("") + (str ? `<p class="small muted" style="margin:4px 2px 0">Tap a set once for done, twice for reduced reps, a third time to clear.</p>` : "");
+    const sk = def.sessionKey, a = str ? altFor(Lg, sk, bi, b) : null, x = str ? xsFor(Lg, sk, bi, b) : null, nm = a ? a.n : b.n, ds = a ? a.d + (/ \(easy\)$/.test(b.d) ? " (easy)" : "") : b.d;
+    let on = 0; const boxes = [...Array(b.s)].map((_,i)=>{ const id=`${sk}:${bi}:${i}`, v = s[id], c=!!v, rd = v==="r"; if(c) on++;
+      return `<button class="check ${c?"on":""} ${rd?"rd":""}" data-k="${k}" data-id="${id}" aria-pressed="${c}" aria-label="${esc(nm)} set ${i+1}${rd?" reduced":""}"><span class="n">${i+1}</span>${rd?`<span class="rdm">−</span>`:CHECK_SVG}</button>`; }).join("");
+    let xon = 0; const xboxes = x ? [...Array(Number(x.n))].map((_,j)=>{ const v = (x.t||{})[j], c = !!v, rd = v==="r"; if(c) xon++;
+      return `<button class="check xchk ${c?"on":""} ${rd?"rd":""}" data-k="${k}" data-xk="${blkKey(sk,bi)}" data-xi="${j}" aria-pressed="${c}" aria-label="${esc(nm)} extra set ${j+1}${rd?" reduced":""}"><span class="n">+${j+1}</span>${rd?`<span class="rdm">−</span>`:CHECK_SVG}</button>`; }).join("") : "";
+    const note = !a && b.prog?.note ? `<div class="small" style="color:var(--lift);margin-top:2px">${esc(b.prog.note)}</div>` : "";
+    const alts = str && Array.isArray(b.alt) ? b.alt : [], ai = a ? alts.indexOf(a) : -1, nxt = ai+1 < alts.length ? alts[ai+1] : null;
+    const altBtn = alts.length ? `<button type="button" class="ghost kxbtn" data-alt="${blkKey(sk,bi)}" data-k="${k}" data-ai="${ai+1 < alts.length ? ai+1 : -1}" aria-label="${esc(L("Switch to ","Wechseln zu ")+tr(nxt? nxt.n : b.n))}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>${nxt ? (alts.length>1 ? `${L("Alternative","Alternative")} ${ai+2}` : L("Alternative","Alternative")) : L("Original","Original")}</span></button>` : "";
+    const xBtns = str && isExBlock(b) ? `<button type="button" class="ghost kxbtn" data-xadd="${blkKey(sk,bi)}" data-k="${k}" aria-label="${esc(L("Add a set to ","Satz hinzufügen zu ")+tr(nm))}">${L("+ Set","+ Satz")}</button>${x?`<button type="button" class="ghost kxbtn" data-xdel="${blkKey(sk,bi)}" data-k="${k}" aria-label="${esc(L("Remove the last extra set of ","Letzten Zusatzsatz entfernen bei ")+tr(nm))}">${L("− Set","− Satz")}</button>`:""}` : "";
+    const ctl = altBtn || xBtns ? `<div class="kxrow">${altBtn}${xBtns}</div>` : "";
+    return `<div class="block ${on===b.s?"done":""} ${a?"isalt":""}"><div class="bh"><span class="bn">${esc(nm)}</span><span class="row" style="gap:10px;flex-wrap:nowrap">${str?howto(nm):""}<span class="small muted mono">${on}/${b.s}${x?` +${xon}`:""}</span></span></div>${a?`<div class="small muted kxof"><span>${L("Instead of","Statt")}</span> <span>${esc(b.n)}</span></div>`:""}<div class="bd">${esc(ds)}</div>${note}<div class="sets">${boxes}${xboxes}</div>${ctl}</div>`;
+  }).join("") + (str ? `<p class="small muted" style="margin:4px 2px 0">Tap a set once for done, twice for reduced reps, a third time to clear.</p><p class="small muted" style="margin:2px 2px 0">${L("Extra sets are optional and do not count for done.","Zusatzsätze sind freiwillig und zählen nicht für erledigt.")}</p>` : "");
 }
 // reps in reserve after the last sets of a strength session (0, 1, 2, 3+); drives the progression
 function rirHtml(def, k){
@@ -710,7 +765,7 @@ function bindRir(root){
   document.querySelectorAll(root+" [data-rir]").forEach(b=>b.onclick = async ()=>{ const L = logData.days[b.dataset.k] = logData.days[b.dataset.k]||{}; L.rir = L.rir||{}; L.rir[b.dataset.sk] = Number(b.dataset.rir); bumpLog(); planCache.clear(); render(); await saveDoc("log", logData); });
 }
 function bindChecks(root, defFor){
-  document.querySelectorAll(root+" .check:not(.mbc)").forEach(btn=>btn.addEventListener("click", async ()=>{
+  document.querySelectorAll(root+" .check:not(.mbc):not(.xchk)").forEach(btn=>btn.addEventListener("click", async ()=>{
     const k = btn.dataset.k, id = btn.dataset.id, L = logData.days[k] = logData.days[k]||{};
     const def = defFor(k);
     L.sets = L.sets||{};
@@ -721,13 +776,43 @@ function bindChecks(root, defFor){
     if(def){
       L.done = L.done||{}; const was = !!L.done[def.sessionKey]; L.done[def.sessionKey] = trainingDone(k,def) || watchConfirmed(k); if(!was && L.done[def.sessionKey]) L.doneAt = Date.now();
       // remember what this block was when you trained it (for the progression) and the day form
-      const [sk, bi] = id.split(":"), b = def.blocks[Number(bi)];
+      const bi = Number(id.split(":")[1]);
       if(!L.form) L.form = recLevel(k);          // the real recovery level of that day, kept once you trained
-      if(b && b.prog){ L.prog = L.prog||{}; L.prog[b.prog.id] = {sk, bi:Number(bi), sets:b.s, reps:b.prog.reps, lvl: L.form, dl: !!def.deload, full: !!L.fullPlan}; }
+      progMark(L, def, bi);                      // not for a chosen alternative (Oti, 18.11.2026)
     }
     bumpLog(); planCache.clear(); render(); await saveDoc("log", logData);
   }));
   bindRir(root);
+  bindKx(root, defFor);
+}
+// alternative switch, extra sets: same save path as the ticks (log doc, three way merge on the server)
+function bindKx(root, defFor){
+  const blk = (k, key) => { const def = defFor(k); if(!def) return {}; const [sk, bi] = [key.slice(0, key.lastIndexOf(":")), Number(key.slice(key.lastIndexOf(":")+1))]; return {def, sk, bi, b: def.sessionKey===sk ? def.blocks[bi] : null}; };
+  const save = async (sched) => { bumpLog(); planCache.clear(); render(); await saveDoc("log", logData); if(sched && typeof writeSchedule==="function") writeSchedule(true); };
+  document.querySelectorAll(root+" [data-alt]").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const k = btn.dataset.k, key = btn.dataset.alt, {def, bi, b} = blk(k, key); if(!b || !Array.isArray(b.alt)) return;
+    const L = logData.days[k] = logData.days[k]||{}, ai = Number(btn.dataset.ai);
+    if(ai >= 0 && b.alt[ai]){ L.alt = L.alt||{}; L.alt[key] = {o:b.n, a:b.alt[ai].n}; }
+    else if(L.alt){ delete L.alt[key]; if(!Object.keys(L.alt).length) delete L.alt;
+      // back to the original with sets already ticked: they count for the original's progression again
+      if([...Array(b.s)].some((_,i)=>(L.sets||{})[`${key}:${i}`])){ if(!L.form) L.form = recLevel(k); progMark(L, def, bi); } }
+    await save(true); }));
+  document.querySelectorAll(root+" [data-xadd]").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const k = btn.dataset.k, key = btn.dataset.xadd, {b} = blk(k, key); if(!b) return;
+    const L = logData.days[k] = logData.days[k]||{}; L.xs = L.xs||{};
+    const x = xsFor(L, key.slice(0, key.lastIndexOf(":")), Number(key.slice(key.lastIndexOf(":")+1)), b);
+    if(x){ if(x.n < 6) x.n = Number(x.n) + 1; } else L.xs[key] = {o:b.n, n:1, t:{}};
+    await save(false); }));
+  document.querySelectorAll(root+" [data-xdel]").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const k = btn.dataset.k, key = btn.dataset.xdel, L = logData.days[k]; const x = L && L.xs && L.xs[key]; if(!x) return;
+    x.n = Math.max(0, Number(x.n) - 1); if(x.t) delete x.t[x.n];
+    if(!x.n){ delete L.xs[key]; if(!Object.keys(L.xs).length) delete L.xs; }
+    await save(false); }));
+  document.querySelectorAll(root+" .xchk").forEach(btn=>btn.addEventListener("click", async ()=>{
+    const k = btn.dataset.k, key = btn.dataset.xk, j = btn.dataset.xi, L = logData.days[k]; const x = L && L.xs && L.xs[key]; if(!x) return;
+    x.t = x.t||{}; const cur = x.t[j];
+    if(!cur) x.t[j] = true; else if(cur===true) x.t[j] = "r"; else delete x.t[j];
+    await save(false); }));
 }
 function defForKey(k){ const d = dayFromPlan(fromKey(k)); return d?.session?.def ? formDef(d.session.def, formLevel(k)) : null; }
 

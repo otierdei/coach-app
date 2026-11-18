@@ -813,3 +813,19 @@ nav.tabs button{font-size:12px}
 @media (min-width: 1000px){
   #v-week .tlc.today .tlh{box-shadow:none;background:color-mix(in srgb,var(--accent) 13%,var(--card));color:var(--accent-ink)}
 }
+/* Kraft Alternativen und Zusatzsätze (18.11.2026) */
+.kxrow{display:flex;flex-wrap:wrap;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.kxbtn{min-height:44px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;font:600 14px/1 var(--body);border-radius:999px}
+.kxbtn svg{flex:none}
+.block.isalt{background:color-mix(in srgb,var(--accent) 7%,var(--card-2))}
+.block .kxof{font-size:13px;margin-top:-4px}
+.check.xchk:not(.on):not(.rd){background:transparent}
+.check.xchk .n{font-size:13px}
+.figbtn{min-height:44px;font-size:13px}
+.figstage{background:var(--card-2)}
+.figstage .muted{color:var(--muted)}
+.figmus .dot{background:var(--accent)}
+.fighow{display:grid;gap:6px}
+.fighow h4{margin:0;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.figerr{margin:0;padding:10px 0 0;border-top:1px solid var(--line);font-size:14px;line-height:1.45;color:var(--ink-2)}
+.figerr b{color:var(--accent-ink,var(--accent))}
