@@ -1,4 +1,6 @@
-/* Exercise figures v3: CC0 MakeHuman body (athletic male), 20 bone rig, white skin, working muscles red.
+/* Exercise figures v3: CC0 MakeHuman body (athletic male), 20 bone rig.
+   18.11.2026 (Design A): matte stone body, working muscles in the wine accent, soft key and fill light,
+   soft floor shadow, light and dark stage.
    Posing: every bone gets a world direction plus a bend reference; arms and legs are solved with two bone IK,
    so hands and feet sit exactly on their targets (floor, box, bar). */
 (function(){
@@ -16,9 +18,11 @@
     M.adj = nb.map(s=>[...s]);
   }
 
-  // colour per vertex: white, red where the muscle works, a soft grey seam between muscles for the contours
-  const WHITE = [0.95,0.93,0.90], RED = [0.60,0.07,0.05], SEAM = 0.5;
-  function colours(work){
+  // colour per vertex: stone body, accent where the muscle works, a faint seam between muscles for the contours
+  const lin = h => { const c = new T.Color(h).convertSRGBToLinear(); return [c.r, c.g, c.b]; };
+  const PAL = { light: {body: lin(0xD2CBC1), work: lin(0x8C2F45), seam: .86}, dark: {body: lin(0xCFC7BB), work: lin(0xE08A9C), seam: .86} };
+  function colours(work, dark){
+    const P = PAL[dark ? "dark" : "light"], WHITE = P.body, RED = P.work, SEAM = P.seam;
     const n = M.pos.length/3, R = M.regions, act = new Float32Array(n), seam = new Float32Array(n);
     const on = new Set(work.map(w=>R.indexOf(w)));
     for(let i=0;i<n;i++) act[i] = on.has(M.reg[i]) ? 1 : 0;
@@ -44,8 +48,8 @@
     M.bones.forEach((b,i)=>{ const h = v3(b.h).multiplyScalar(SC);
       if(b.p){ const p = M.bones[M.nb[b.p]]; bones[M.nb[b.p]].add(bones[i]); bones[i].position.copy(h.sub(v3(p.h).multiplyScalar(SC))); }
       else bones[i].position.copy(h); });
-    const mat = new T.MeshStandardMaterial({vertexColors:true, roughness:.62, metalness:0});
-    const mesh = new T.SkinnedMesh(g, mat);
+    const mat = new T.MeshStandardMaterial({vertexColors:true, roughness:.88, metalness:0});
+    const mesh = new T.SkinnedMesh(g, mat); mesh.castShadow = true; mesh.frustumCulled = false;
     const root = bones[0]; mesh.add(root); mesh.bind(new T.Skeleton(bones));
     return {mesh, bones, g};
   }
@@ -109,15 +113,19 @@
     if(pose.curl) commit();
   }
 
-  function scene(el, w, h){
+  // soft light from above front (key), a weak fill from the other side, sky and ground bounce; the key casts a soft shadow on the floor
+  function scene(el, w, h, dark){
     const R = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:!!window.FIG3_KEEP}); R.setPixelRatio(Math.min(2, window.devicePixelRatio||1)); R.setSize(w, h);
-    R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 1.05;
+    R.outputEncoding = T.sRGBEncoding; R.toneMapping = T.NoToneMapping;
+    R.shadowMap.enabled = true; R.shadowMap.type = T.VSMShadowMap;
     el.appendChild(R.domElement);
     const S = new T.Scene(), C = new T.PerspectiveCamera(30, w/h, .05, 50);
-    S.add(new T.HemisphereLight(0xffffff, 0x6f675d, .55));
-    const k = new T.DirectionalLight(0xffffff, 1.7); k.position.set(3,3.5,2.2); S.add(k);
-    const r = new T.DirectionalLight(0xffeedd, .55); r.position.set(-3,2,-2.5); S.add(r);
-    return {R,S,C};
+    S.add(new T.HemisphereLight(0xfffaf2, dark ? 0x4a4036 : 0x9a8f80, dark ? .78 : .82));
+    const k = new T.DirectionalLight(0xfff6ea, dark ? 1.05 : 1.15); k.position.set(1.6, 4.2, 2.6); k.castShadow = true;
+    k.shadow.mapSize.set(1024, 1024); k.shadow.radius = 9; k.shadow.blurSamples = 16; k.shadow.bias = -0.0006;
+    Object.assign(k.shadow.camera, {left:-2.2, right:2.2, top:2.6, bottom:-2.2, near:.5, far:9}); S.add(k); S.add(k.target);
+    const r = new T.DirectionalLight(0xf2f0ff, dark ? .32 : .36); r.position.set(-3, 2.2, -2); S.add(r);
+    return {R,S,C,key:k};
   }
   window.FIG3 = {setModel, build, apply, colours, scene, lerp, lv, ease, M:()=>M};
 })();

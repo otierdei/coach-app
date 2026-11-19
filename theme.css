@@ -829,3 +829,5 @@ nav.tabs button{font-size:12px}
 .fighow h4{margin:0;font:700 13px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
 .figerr{margin:0;padding:10px 0 0;border-top:1px solid var(--line);font-size:14px;line-height:1.45;color:var(--ink-2)}
 .figerr b{color:var(--accent-ink,var(--accent))}
+#figInfo{display:grid;gap:12px;margin-top:14px}
+#figInfo #figPlay{min-height:44px;justify-self:start}
