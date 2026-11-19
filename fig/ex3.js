@@ -240,7 +240,7 @@
 
   // band across the upper back, ends under the hands
   const backBand = F => { const hl = gripW(F,"L"), hr = gripW(F,"R"), sl = boneW(F,"upperarm.L"), sr = boneW(F,"upperarm.R"), P = (o, x, y, z) => o.clone().add(new T.Vector3(x, y, z));
-    return [hl.clone().setY(.012), P(sl, .07, .0, .0), P(sl, -.02, .1, -.06), P(sr, .02, .1, -.06), P(sr, -.07, .0, .0), hr.clone().setY(.012)]; };
+    return [hl.clone().setY(.012), P(sl, .075, .01, .0), P(sl, -.05, .07, -.03), P(sr, .05, .07, -.03), P(sr, -.075, .01, .0), hr.clone().setY(.012)]; };
   EX.bandpush = { ...EX.pushup, re:/band resisted push/i, en:"Band resisted push ups", de:"Liegestütze mit Band", keys:EX.pushup.keys,
     cues:{en:["Band across the upper back, ends under the hands","Body one line, elbows about 45 degrees","Lower with control, press hard against the band"], de:["Band über den oberen Rücken, Enden unter den Händen","Körper eine Linie, Ellbogen etwa 45 Grad","Kontrolliert ablassen, kräftig gegen das Band drücken"]},
     err:{en:"Band slides down to the lower back.", de:"Das Band rutscht auf den unteren Rücken."},
